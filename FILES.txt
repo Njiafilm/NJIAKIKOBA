@@ -1,0 +1,15 @@
+.env.example
+README.md
+app.py
+requirements.txt
+static/assets/njiakikoba-hero.png
+static/assets/njiakikoba-mobile.jpg
+static/assets/njiakikoba-ui-showcase.png
+static/style.css
+templates/dashboard.html
+templates/developer_dashboard.html
+templates/developer_login.html
+templates/index.html
+templates/login.html
+templates/register.html
+templates/register_leaders.html
