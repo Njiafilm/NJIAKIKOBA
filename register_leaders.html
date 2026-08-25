@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usajili wa Viongozi | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head><body>
+<nav class="nav"><a class="brand" href="/"><img src="/static/assets/njiakikoba-hero.png"> NJIAKIKOBA</a></nav>
+<main class="auth"><form class="form-card" method="post"><h1>Usajili wa Kiongozi</h1><p class="muted">Taarifa za kitambulisho zinalindwa na hazionyeshwi kwenye Developer Room.</p>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+<label>Nafasi</label><select name="leader_title" required><option>Mwenyekiti</option><option>Katibu</option><option>Mhasibu</option></select>
+<label>Jina kamili</label><input name="full_name" required>
+<label>Namba ya simu</label><input name="phone" required>
+<label>Aina ya kitambulisho</label><select name="id_type" required><option>NIDA</option><option>Leseni</option><option>Passport</option><option>Kadi ya Mpiga Kura</option></select>
+<label>Namba ya kitambulisho</label><input name="id_number" required>
+<label>Nywila</label><input name="password" type="password" minlength="8" required>
+<br><br><button class="btn btn-gold" type="submit">Hifadhi Taarifa</button></form></main>
+</body></html>
