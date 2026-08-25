@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developer Access | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head><body>
+<main class="auth dev"><form class="form-card dev-card" method="post"><h1>Developer Access</h1><p class="muted">Eneo hili halijaunganishwa na public navigation.</p>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+<label>Developer Password</label><input name="developer_password" type="password" autocomplete="current-password" required>
+<br><br><button class="btn btn-gold" type="submit">Fungua Developer Room</button></form></main>
+</body></html>
