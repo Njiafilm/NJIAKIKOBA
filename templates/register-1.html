@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jisajili | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head><body>
+<nav class="nav"><a class="brand" href="/"><img src="/static/assets/njiakikoba-hero.png"> NJIAKIKOBA</a><div class="navlinks"><a href="/login">Ingia</a></div></nav>
+<main class="auth"><form class="form-card" method="post"><h1>Fungua Akaunti</h1><p class="muted">Jiunge na NJIAKIKOBA.</p>
+{% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+<label>Jina kamili</label><input name="full_name" required>
+<label>Namba ya simu</label><input name="phone" inputmode="tel" required>
+<label>Namba ya malipo (ya mwanachama)</label><input name="payment_phone" inputmode="tel" placeholder="2557XXXXXXXX" required>
+<label>Mtandao wa malipo</label><select name="payment_network"><option>MPESA</option><option>AIRTEL_MONEY</option><option>MIXX_BY_YAS</option><option>HALOPESA</option><option>EZYPESA</option><option>TTCLPESA</option></select>
+<label>Barua pepe</label><input name="email" type="email" required>
+<label>Nywila</label><input name="password" type="password" minlength="8" required>
+<br><br><button class="btn btn-gold" type="submit">Tengeneza Akaunti</button><p class="muted">Una akaunti? <a href="/login">Ingia</a></p></form></main>
+</body></html>
