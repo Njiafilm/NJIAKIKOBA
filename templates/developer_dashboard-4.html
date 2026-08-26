@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developer Room | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head><body>
+<div class="dev"><nav class="nav"><span class="brand">🔐 NJIAKIKOBA DEVELOPER</span><div class="navlinks"><a href="/logout">Toka</a></div></nav>
+<main class="dashboard"><div class="topline"><div><h1>Developer Room</h1><p class="muted">Technical monitoring only. Member financial details are not exposed here.</p></div>
+<form method="post" action="/run-bots"><button class="btn btn-gold">⚙️ Run System Checker & Security Bots</button></form></div>
+
+<div class="card" style="margin-bottom:20px">
+  <h3>💰 Mapato Yako (Operating Commission)</h3>
+  <div class="dev-earnings">TZS {{ "{:,.2f}".format(stats.commission) }}</div>
+  <p class="muted">Jumla ya mapato yote yaliyolipwa. Siku 30 zilizopita: TZS {{ "{:,.2f}".format(stats.commission_30d) }}</p>
+</div>
+
+<div class="stats"><div class="stat">Transactions<strong>{{stats.transactions}}</strong></div><div class="stat">Pending<strong>{{stats.pending}}</strong></div><div class="stat">Operating Commission<strong>TZS {{ "{:,.2f}".format(stats.commission) }}</strong></div><div class="stat">Errors<strong>{{stats.errors}}</strong></div></div>
+<div class="table-wrap"><table class="table"><thead><tr><th>Level</th><th>Message</th><th>Tarehe</th></tr></thead><tbody>{% for l in logs %}<tr><td>{{l["level"]}}</td><td>{{l["message"]}}</td><td>{{l["created_at"]}}</td></tr>{% else %}<tr><td colspan="3">Hakuna system logs.</td></tr>{% endfor %}</tbody></table></div>
+
+<div class="card dev-card" style="margin-top:20px">
+  <h3>🔌 Muunganiko wa Mapato (AdSense / Store)</h3>
+  <p class="muted">Jaza tu ukiwa na akaunti halisi za Google AdSense, Google Play, au Apple App Store. Kiungo/script haitaonekana kwenye tovuti mpaka ujaze hapa.</p>
+  {% with messages_f=get_flashed_messages(with_categories=true) %}{% for c,m in messages_f %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+  <form method="post" action="/developer-dashboard/settings" class="dev-settings-form">
+    <div>
+      <label>Google AdSense Publisher ID (mfano: ca-pub-1234567890123456)</label>
+      <input type="text" name="adsense_publisher_id" value="{{ settings['adsense_publisher_id'] or '' }}" placeholder="ca-pub-XXXXXXXXXXXXXXXX">
+    </div>
+    <div>
+      <label>Google Play Store — Link ya App</label>
+      <input type="url" name="play_store_url" value="{{ settings['play_store_url'] or '' }}" placeholder="https://play.google.com/store/apps/details?id=...">
+    </div>
+    <div>
+      <label>Apple App Store — Link ya App</label>
+      <input type="url" name="appstore_url" value="{{ settings['appstore_url'] or '' }}" placeholder="https://apps.apple.com/app/id...">
+    </div>
+    <button class="btn btn-gold" type="submit" style="justify-self:start">Hifadhi Mipangilio</button>
+  </form>
+</div>
+
+<div class="card share-card" style="margin-top:20px">
+  <h3>📣 Sambaza Mfumo</h3>
+  <p class="muted">Waalike watumiaji au wenzako kutumia/kujaribu mfumo.</p>
+  <div class="share-row">
+    <a class="btn share-btn-wa" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Angalia NJIAKIKOBA: ' ~ url_for('home', _external=True)) | urlencode }}">💬 Share WhatsApp</a>
+  </div>
+  <input type="text" readonly value="{{ url_for('home', _external=True) }}" class="share-url-box">
+</div>
+
+<div class="card dev-card" style="margin-top:20px"><h3>Mawasiliano</h3><p>Email: gsdtech20@gmail.com</p><p>WhatsApp: 0755 248 789</p><p class="muted">Payment payout account haionyeshwi hapa wala kwenye public UI; itapaswa kuhifadhiwa kama secret ya deployment.</p></div>
+</main></div>
+</body></html>
