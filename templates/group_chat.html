@@ -2,62 +2,227 @@
 <html lang="sw">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="refresh" content="20">
-<title>Mazungumzo ya Kikundi | NJIAKIKOBA</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>💬 Mazungumzo | NJIAKIKOBA</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+body{background:#f4f7f5!important;color:#17231c!important}
+.chat-page{max-width:900px;margin:auto;padding:18px 12px 35px}
+.chat-card{background:#fff;border:1px solid #dce5df;border-radius:16px;padding:14px;box-shadow:0 8px 25px rgba(20,55,30,.08)}
+.chat-card h1{margin:0;color:#12321c!important;font-size:25px}
+.chat-sub{color:#5b6b62!important;margin:6px 0 0;line-height:1.5}
+.chat-list{display:flex;flex-direction:column;gap:11px;margin:15px 0}
+.msg{background:#fff;border:1px solid #d9e2dc;border-radius:13px;padding:12px;color:#17231c!important}
+.msg.me{background:#f3f9fe;border-left:4px solid #2f80c9}
+.msg.pinned{box-shadow:0 0 0 2px #e8b923 inset}
+.msg-head{display:flex;justify-content:space-between;gap:8px}
+.msg-name{font-weight:800;color:#14251a!important}
+.msg-time{font-size:11px;color:#68766e!important;white-space:nowrap}
+.badge{display:inline-block;margin-left:4px;padding:3px 7px;border-radius:20px;background:#e8b923;color:#332800!important;font-size:10px;font-weight:900}
+.badge-dev{background:#2f80c9;color:#fff!important}
+.msg-body{margin:8px 0;color:#17231c!important;white-space:pre-wrap;word-break:break-word;line-height:1.6;font-size:15px}
+.media{margin:8px 0}
+.media img{display:block;max-width:100%;max-height:420px;border-radius:11px}
+.media audio,.media video{display:block;width:100%;max-width:650px;border-radius:11px}
+.media-name{font-size:11px;color:#66756d;margin-top:5px;word-break:break-all}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.action{background:#fff!important;color:#26372d!important;border:1px solid #ccd6d0;border-radius:8px;padding:7px 10px;font-weight:700}
+.danger{color:#b42318!important;border-color:#efc5c0}
+.composer{margin-top:14px;border-top:1px solid #e7ece9;padding-top:13px}
+textarea{width:100%;min-height:70px;resize:vertical;border:1px solid #bdc9c1;border-radius:10px;padding:12px;font:15px/1.5 inherit;color:#17231c!important;background:#fff!important}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0}
+.tool{border:1px solid #ccd6d0;border-radius:9px;padding:9px 11px;background:#fff;color:#24342b;font-weight:700;cursor:pointer}
+.tool.recording{background:#b42318;color:#fff;border-color:#b42318}
+#mediaInput{display:none}
+.preview{display:none;background:#f7f9f8;border:1px solid #d9e2dc;border-radius:10px;padding:9px;margin:8px 0}
+.preview.show{display:block}
+.preview img,.preview video,.preview audio{max-width:100%;max-height:220px;border-radius:8px}
+.send{width:100%;min-height:48px;border:0;border-radius:10px;background:#0e7a34;color:#fff;font-size:16px;font-weight:900;cursor:pointer}
+.record-status{font-size:12px;color:#b42318;font-weight:800;margin:4px 0}
+@media(max-width:600px){.chat-page{padding:10px 8px}.chat-card{padding:12px}.msg-head{display:block}.msg-time{display:block;margin-top:3px}.tool{flex:1;text-align:center}.msg-body{font-size:15px}}
+</style>
 </head>
 <body>
 <nav class="nav">
-  <a class="brand" href="/"><img src="/static/njiakikoba-hero-2.png"> NJIAKIKOBA</a>
+  <a class="brand" href="/">🔐 NJIAKIKOBA</a>
   <div class="navlinks">
-    <a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a>
-    <a href="/dashboard">Dashboard</a>
-    <span>{{ actor["full_name"] }}</span>
+    <a class="back-btn" href="javascript:history.back()">← Rudi</a>
     <a href="/logout">Toka</a>
   </div>
 </nav>
 
-<main class="chat-wrap">
-  <div class="chat-head">
-    <h1>💬 Mazungumzo ya Kikundi</h1>
-    <p class="muted">Mjadala wa wanachama, unaosimamiwa na viongozi. Ukurasa unajisasisha kila sekunde 20.</p>
+<main class="chat-page">
+<section class="chat-card">
+  <h1>💬 Mazungumzo ya Kikundi</h1>
+  <p class="chat-sub">Tuma maandishi, picha, ujumbe wa sauti au video.</p>
+  <div style="margin-top:12px">
+    <a href="/conference-call" style="display:block;text-align:center;text-decoration:none;background:#0e7a34;color:#fff;border-radius:10px;padding:12px;font-weight:900">
+      📞 Anza / Jiunge na Conference Call
+    </a>
   </div>
 
-  {% with messages_f=get_flashed_messages(with_categories=true) %}
-    {% for c,m in messages_f %}<div class="alert {{c}}">{{m}}</div>{% endfor %}
+  {% with flash_messages=get_flashed_messages(with_categories=true) %}
+    {% for category,message in flash_messages %}
+      <div class="alert {{category}}">{{message}}</div>
+    {% endfor %}
   {% endwith %}
 
   <div class="chat-list">
-    {% for msg in messages %}
-    <div class="chat-msg {{ 'chat-msg-leader' if msg['role']=='leader' else '' }} {{ 'chat-msg-mine' if msg['user_id']==session['user_id'] else '' }} {{ 'chat-msg-pinned' if msg['pinned'] else '' }}">
-      <div class="chat-msg-head">
-        <span class="chat-name">{{ msg["full_name"] }}{% if msg["role"]=="leader" %} <span class="chat-badge">Kiongozi</span>{% endif %}</span>
-        <span class="chat-time">{{ msg["created_at"] }}</span>
+  {% for msg in messages %}
+    <article class="msg {% if msg['user_id'] == actor['id'] %}me{% endif %} {% if msg['pinned'] %}pinned{% endif %}">
+      <div class="msg-head">
+        <div class="msg-name">
+          {{msg['full_name']}}
+          {% if msg['role']=='leader' %}<span class="badge">KIONGOZI</span>{% endif %}
+          {% if msg['role']=='developer' %}<span class="badge badge-dev">DEVELOPER</span>{% endif %}
+          {% if msg['pinned'] %}<span class="badge">📌 PIN</span>{% endif %}
+        </div>
+        <time class="msg-time">{{msg['created_at']}}</time>
       </div>
-      <p class="chat-body">{{ msg["body"] }}</p>
-      <div class="chat-actions">
-        {% if actor["role"]=="leader" %}
-        <form method="post" action="/group-chat/pin/{{ msg['id'] }}" class="chat-inline-form">
-          <button type="submit" class="chat-action-btn">{{ '📌 Ondoa Pin' if msg['pinned'] else '📌 Pin' }}</button>
+
+      {% if msg['body'] %}
+        <div class="msg-body">{{msg['body']}}</div>
+      {% endif %}
+
+      {% if msg['media_url'] %}
+        <div class="media">
+          {% if msg['media_kind']=='image' %}
+            <img src="{{msg['media_url']}}" alt="Picha ya ujumbe" loading="lazy">
+          {% elif msg['media_kind']=='audio' %}
+            <audio controls preload="metadata" src="{{msg['media_url']}}"></audio>
+          {% elif msg['media_kind']=='video' %}
+            <video controls preload="metadata" playsinline src="{{msg['media_url']}}"></video>
+          {% endif %}
+          <div class="media-name">📎 {{msg['media_name'] or 'Media'}}</div>
+        </div>
+      {% endif %}
+
+      <div class="actions">
+        {% if actor['role']=='leader' %}
+        <form method="post" action="{{url_for('group_chat_pin',message_id=msg['id'])}}">
+          <button class="action" type="submit">{% if msg['pinned'] %}📌 Ondoa Pin{% else %}📌 Pin{% endif %}</button>
         </form>
         {% endif %}
-        {% if actor["role"]=="leader" or msg["user_id"]==session['user_id'] %}
-        <form method="post" action="/group-chat/delete/{{ msg['id'] }}" class="chat-inline-form" onsubmit="return confirm('Futa ujumbe huu?');">
-          <button type="submit" class="chat-action-btn chat-action-danger">🗑 Futa</button>
+        {% if actor['role']=='leader' or msg['user_id']==actor['id'] %}
+        <form method="post" action="{{url_for('group_chat_delete',message_id=msg['id'])}}" onsubmit="return confirm('Futa ujumbe huu?');">
+          <button class="action danger" type="submit">🗑 Futa</button>
         </form>
         {% endif %}
       </div>
-    </div>
-    {% else %}
-    <p class="muted">Hakuna ujumbe bado. Anza mjadala!</p>
-    {% endfor %}
+    </article>
+  {% else %}
+    <div class="empty-chat">💬 Bado hakuna ujumbe.</div>
+  {% endfor %}
   </div>
 
-  <form method="post" action="/group-chat" class="chat-form">
-    <textarea name="body" placeholder="Andika ujumbe wako hapa..." maxlength="1000" required></textarea>
-    <button type="submit" class="btn btn-green">Tuma</button>
+  <form class="composer" method="post" enctype="multipart/form-data" id="chatForm">
+    <textarea name="body" maxlength="1000" placeholder="Andika ujumbe..."></textarea>
+
+    <div class="tools">
+      <label class="tool">🖼️ Picha
+        <input id="mediaInput" type="file" name="media" accept="image/*">
+      </label>
+      <button class="tool" type="button" id="audioBtn">🎙️ Sauti</button>
+      <button class="tool" type="button" id="videoBtn">🎥 Video</button>
+    </div>
+
+    <div id="recordStatus" class="record-status"></div>
+    <div id="preview" class="preview"></div>
+
+    <button class="send" type="submit">📤 Tuma Ujumbe</button>
   </form>
+</section>
+  <section class="chat-card" style="margin-top:14px">
+    <h2 style="margin:0;color:#12321c">📱 WhatsApp ya Wanakikundi</h2>
+    <p class="chat-sub">Namba zinazoonekana hapa ni za wanachama wa <strong>{{ group["group_name"] }}</strong> pekee.</p>
+    <div style="display:grid;gap:8px;margin-top:10px">
+      {% for member in members %}
+        <a href="{{ url_for('group_member_whatsapp', member_id=member['id']) }}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid #dce5df;border-radius:10px;text-decoration:none;background:#f8fbf9;color:#17231c">
+          <span><strong>{{ member['full_name'] }}</strong>{% if member['role']=='leader' %} <span class="badge">KIONGOZI</span>{% endif %}<br><span style="color:#53645b">📞 {{ member['phone'] }}</span></span>
+          <span style="font-weight:900;color:#0e7a34">💬 WhatsApp</span>
+        </a>
+      {% else %}
+        <div class="muted">Hakuna wanachama hai waliopo kwenye kikundi.</div>
+      {% endfor %}
+    </div>
+  </section>
+
 </main>
+
+<script>
+const form=document.getElementById('chatForm');
+const input=document.getElementById('mediaInput');
+const preview=document.getElementById('preview');
+const statusEl=document.getElementById('recordStatus');
+const audioBtn=document.getElementById('audioBtn');
+const videoBtn=document.getElementById('videoBtn');
+let recorder=null, chunks=[], stream=null, recordKind=null;
+
+input.addEventListener('change',()=>{
+  preview.innerHTML='';
+  const f=input.files[0];
+  if(!f){preview.classList.remove('show');return;}
+  const url=URL.createObjectURL(f);
+  if(f.type.startsWith('image/')){
+    const img=document.createElement('img'); img.src=url; preview.appendChild(img);
+  }
+  const name=document.createElement('div'); name.textContent='📎 '+f.name; preview.appendChild(name);
+  preview.classList.add('show');
+});
+
+function stopTracks(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+}
+function pickMime(kind){
+  const choices=kind==='audio'
+    ? ['audio/webm;codecs=opus','audio/webm','audio/ogg']
+    : ['video/webm;codecs=vp8,opus','video/webm'];
+  return choices.find(x=>MediaRecorder.isTypeSupported(x))||'';
+}
+async function toggleRecord(kind){
+  if(recorder && recorder.state==='recording'){
+    recorder.stop(); return;
+  }
+  try{
+    stream=await navigator.mediaDevices.getUserMedia(
+      kind==='audio' ? {audio:true} : {audio:true,video:true}
+    );
+    const mime=pickMime(kind);
+    recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+    chunks=[]; recordKind=kind;
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    recorder.onstop=()=>{
+      const type=recorder.mimeType||mime||(kind==='audio'?'audio/webm':'video/webm');
+      const blob=new Blob(chunks,{type});
+      const ext=kind==='audio'?'.webm':'.webm';
+      const file=new File([blob],kind==='audio'?'voice-note'+ext:'video-message'+ext,{type});
+      const dt=new DataTransfer(); dt.items.add(file); input.files=dt.files;
+      preview.innerHTML='';
+      const el=document.createElement(kind==='audio'?'audio':'video');
+      el.controls=true; el.playsInline=true; el.src=URL.createObjectURL(blob);
+      preview.appendChild(el); preview.classList.add('show');
+      statusEl.textContent='✓ '+(kind==='audio'?'Ujumbe wa sauti':'Video')+' tayari kutumwa.';
+      audioBtn.classList.remove('recording'); videoBtn.classList.remove('recording');
+      stopTracks();
+    };
+    recorder.start();
+    statusEl.textContent='● Inarekodi... bonyeza tena kumaliza.';
+    (kind==='audio'?audioBtn:videoBtn).classList.add('recording');
+  }catch(err){
+    statusEl.textContent='Ruhusa ya kamera/microphone imekataliwa au haipatikani.';
+    stopTracks();
+  }
+}
+audioBtn.onclick=()=>toggleRecord('audio');
+videoBtn.onclick=()=>toggleRecord('video');
+
+form.addEventListener('submit',e=>{
+  if(recorder && recorder.state==='recording'){
+    e.preventDefault();
+    recorder.stop();
+    setTimeout(()=>form.submit(),350);
+  }
+});
+</script>
 </body>
 </html>

@@ -1,19 +1,23 @@
 <!doctype html>
-<html lang="sw">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Usajili wa Viongozi | NJIAKIKOBA</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-</head><body>
-<nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero-2.png"> NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a></div></nav>
-<main class="auth"><form class="form-card" method="post"><h1>Usajili wa Kiongozi</h1><p class="muted">Taarifa za kitambulisho zinalindwa na hazionyeshwi kwenye Developer Room.</p>
-{% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
-<label>Nafasi</label><select name="leader_title" required><option>Mwenyekiti</option><option>Katibu</option><option>Mhasibu</option></select>
-<label>Jina kamili</label><input name="full_name" required>
-<label>Namba ya simu</label><input name="phone" required>
-<label>Aina ya kitambulisho</label><select name="id_type" required><option>NIDA</option><option>Leseni</option><option>Passport</option><option>Kadi ya Mpiga Kura</option></select>
-<label>Namba ya kitambulisho</label><input name="id_number" required>
-<label>Nywila</label><input name="password" type="password" minlength="8" required>
-<br><br><button class="btn btn-gold" type="submit">Hifadhi Taarifa</button></form></main>
-</body></html>
+<html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sajili Kiongozi | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{url_for('static',filename='style.css')}}">
+<style>
+.form-page{max-width:650px;margin:auto;padding:22px 12px}.card{background:#fff;border:1px solid #dce5df;border-radius:16px;padding:20px;box-shadow:0 8px 25px rgba(20,55,30,.08)}
+h1{color:#12321c}.hint{color:#617067;line-height:1.6}.field{margin:13px 0}.field label{display:block;font-weight:800;color:#20372a;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #bdc9c1;border-radius:9px;font-size:16px}.btn{width:100%;padding:13px;border:0;border-radius:10px;background:#0e7a34;color:#fff;font-size:16px;font-weight:900}
+</style></head><body>
+<nav class="nav"><a class="brand" href="/">🔐 NJIAKIKOBA</a><div class="navlinks"><a href="/login">Ingia</a></div></nav>
+<main class="form-page"><section class="card">
+<h1>👑 Sajili Kiongozi wa Kikundi</h1>
+<p class="hint">Tumia Registration Code ya kikundi husika. Kila kikundi kinaweza kuwa na viongozi wasiozidi 3.</p>
+{% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+<form method="post" action="/register-leaders">
+<div class="field"><label>Registration Code ya Kikundi</label><input name="group_code" placeholder="NK-000000000000001" required></div>
+<div class="field"><label>Nafasi ya Kiongozi</label><input name="leader_title" placeholder="Mwenyekiti" required></div>
+<div class="field"><label>Jina Kamili</label><input name="full_name" required></div>
+<div class="field"><label>Namba ya Simu</label><input name="phone" inputmode="tel" required></div>
+<div class="field"><label>Aina ya Kitambulisho</label><input name="id_type" placeholder="NIDA / Passport / ..." required></div>
+<div class="field"><label>Namba ya Kitambulisho</label><input name="id_number" required></div>
+<div class="field"><label>Nywila</label><input type="password" name="password" minlength="8" required></div>
+<button class="btn">Sajili Kiongozi</button>
+</form></section></main></body></html>

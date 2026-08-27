@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vikundi | Developer Room</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}">
+<style>
+.page{max-width:1050px;margin:auto;padding:18px 12px}.card{background:#fff;border:1px solid #dce5df;border-radius:15px;padding:16px;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.field{margin:10px 0}.field label{display:block;font-weight:800;margin-bottom:5px}.field input{width:100%;padding:11px;border:1px solid #bdc9c1;border-radius:8px}.btn{display:inline-block;background:#0e7a34;color:#fff!important;text-decoration:none;border:0;border-radius:9px;padding:10px 13px;font-weight:900}.code{font-family:monospace;font-weight:900;font-size:16px}.muted{color:#617067}
+</style></head><body>
+<nav class="nav"><span class="brand">🔐 DEVELOPER ROOM</span><div class="navlinks"><a href="/developer-dashboard">Dashboard</a><a href="/logout">Toka</a></div></nav>
+<main class="page">
+<div class="card"><h1>🏘️ Usimamizi wa Vikundi</h1><p class="muted">Sehemu hii ni ya Developer pekee. Wanakikundi hawawezi kuiona.</p>
+{% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+<form method="post">
+<div class="field"><label>Jina la Kikundi</label><input name="group_name" placeholder="Kikundi A" required></div>
+<div class="field"><label>Ukomo wa Wanachama</label><input type="number" name="member_cap" min="1" max="999" value="999"></div>
+<button class="btn">➕ Sajili Kikundi</button>
+</form></div>
+<div class="grid">
+{% for g in groups %}
+<article class="card"><h2>{{g['group_name']}}</h2>
+<p>👥 <strong>{{g['member_count']}}</strong> / {{g['member_cap']}} · 👑 {{g['leader_count'] or 0}} viongozi</p>
+<p>💰 Akiba: TZS {{'{:,.0f}'.format(g['savings'] or 0)}}<br>💳 Mikopo: TZS {{'{:,.0f}'.format(g['loans'] or 0)}}</p>
+<p>🔑 Registration Code:<br><span class="code">{{g['registration_code']}}</span></p>
+<a class="btn" href="/developer-dashboard/groups/{{g['id']}}">🔍 Kagua Kikundi</a>
+</article>
+{% else %}<article class="card"><p>Hakuna vikundi.</p></article>{% endfor %}
+</div></main></body></html>

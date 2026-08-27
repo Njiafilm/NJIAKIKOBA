@@ -7,18 +7,25 @@
 
 </head><body>
 <div class="dev"><nav class="nav"><span class="brand">🔐 NJIAKIKOBA DEVELOPER</span><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/logout">Toka</a></div></nav>
-<main class="dashboard"><div class="topline"><div><h1>Developer Room</h1><p class="muted">Technical monitoring only. Member financial details are not exposed here.</p></div>
+<main class="dashboard"><div class="topline"><div><h1>Developer Room</h1><p class="muted">Technical monitoring only. Developer ni msimamizi wa mfumo, si mwanakikundi. Uwepo wake hauonyeshwi kwa members.</p></div>
 <form method="post" action="/run-bots"><button class="btn btn-gold">⚙️ Run System Checker & Security Bots</button></form></div>
 
 <div class="card" style="margin-bottom:20px">
   <h3>🧭 Urambazaji wa Mfumo</h3>
   <p class="muted">Fikia sehemu nyingine za mfumo kwa ukaguzi wa jumla. Taarifa za akaunti binafsi za wanachama (salio, malipo) hazionekani mahali popote hapa.</p>
   <div class="dev-nav-links">
+    <a href="/developer-dashboard/groups" class="btn btn-gold">🏘️ Simamia Vikundi</a>
     <a href="/developer-dashboard/chat" class="btn btn-gold">💬 Group Chat (Simamia)</a>
     <a href="/" target="_blank" rel="noopener" class="btn btn-white">🏠 Home Page</a>
     <a href="/register-leaders" target="_blank" rel="noopener" class="btn btn-white">👤 Usajili wa Viongozi</a>
     <a href="/register" target="_blank" rel="noopener" class="btn btn-white">➕ Usajili wa Mwanachama</a>
   </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;background:#f4fbf6">
+  <h3>🏘️ Vikundi Vyote</h3>
+  <p class="muted">Unda Kikundi A, Kikundi B, n.k., kila kikiwa na wanachama na viongozi wake tofauti.</p>
+  <a href="/developer-dashboard/groups" class="btn btn-gold">Fungua Usimamizi wa Vikundi</a>
 </div>
 
 <div class="card" style="margin-bottom:20px">
@@ -32,7 +39,7 @@
 
 <div class="card" style="margin-bottom:20px">
   <h3>🏷️ Kikundi</h3>
-  <p class="muted">Namba ya Usajili: <strong>{{ settings["registration_code"] or "—" }}</strong> (haionekani kwenye tovuti ya umma) &middot; Viongozi: {{ counts.leaders }}/3 &middot; Wanachama Jumla: {{ counts.members }}/{{ settings["member_cap"] or 999 }}</p>
+  <p class="muted">Namba ya Usajili: <strong>{{ settings["registration_code"] or "—" }}</strong> (haionekani kwenye tovuti ya umma) &middot; Vikundi: {{ counts.groups }} &middot; Viongozi: {{ counts.leaders }} &middot; Wanachama Wote Waliosajiliwa: {{ counts.members }}</p>
 </div>
 
 <div class="card" style="margin-bottom:20px">
@@ -52,6 +59,44 @@
   <form method="post" action="/developer-dashboard/end-cycle" onsubmit="return confirm('Hii itahesabu ada ya 2% ya jumla ya akiba zote na kuirekodi. Haitatuma pesa kiotomatiki. Endelea?');">
     <button type="submit" class="btn btn-gold">🔒 Funga Mzunguko wa Sasa (Hesabu Ada 2%)</button>
   </form>
+</div>
+
+<div class="card dev-card" style="margin-bottom:20px;background:#f7fbff">
+  <h3>💳 Payment Systems — Unganisha Bila Code</h3>
+  <p class="muted">Ongeza Azam Pay, Click Pesa, BLMPay au provider mwingine kwa kujaza fields hapa. Secrets hazionyeshwi tena baada ya kuhifadhi. Connectivity test haitumi pesa.</p>
+  <form method="post" action="/developer-dashboard/payment-providers" class="dev-settings-form">
+    <input type="hidden" name="provider_id" value="">
+    <div><label>Jina la Mfumo</label><input name="provider_name" placeholder="Azam Pay / Click Pesa / BLMPay" required></div>
+    <div><label>Aina</label><select name="provider_type"><option value="both">Collection + Payout</option><option value="collection">Collection</option><option value="payout">Payout</option></select></div>
+    <div><label>Base API URL</label><input name="base_url" type="url" placeholder="https://api.example.tz"></div>
+    <div><label>API Key</label><input name="api_key" type="password" autocomplete="new-password" placeholder="Secret — itawekwa private"></div>
+    <div><label>API Secret</label><input name="api_secret" type="password" autocomplete="new-password"></div>
+    <div><label>Merchant ID / Account ID</label><input name="merchant_id"></div>
+    <div><label>Collection Path</label><input name="collection_path" placeholder="/payments/collect"></div>
+    <div><label>Payout Path</label><input name="payout_path" placeholder="/payments/payout"></div>
+    <div><label>Webhook Path</label><input name="webhook_path" placeholder="/webhooks/provider"></div>
+    <div><label>Webhook Secret</label><input name="webhook_secret" type="password" autocomplete="new-password"></div>
+    <div><label>Maelezo</label><input name="notes" placeholder="Mfano: Tanzania mobile money"></div>
+    <div style="display:flex;gap:14px;align-items:center"><label><input type="checkbox" name="enabled"> Enabled</label><label><input type="checkbox" name="is_default"> Default</label></div>
+    <button class="btn btn-gold" type="submit">💾 Hifadhi Payment System</button>
+  </form>
+  {% if payment_providers %}
+  <div class="table-wrap" style="margin-top:14px"><table class="table"><thead><tr><th>Provider</th><th>Aina</th><th>Status</th><th>Default</th><th>Base URL</th><th>Actions</th></tr></thead><tbody>
+  {% for p in payment_providers %}<tr><td><strong>{{p['provider_name']}}</strong></td><td>{{p['provider_type']}}</td><td>{{'Enabled' if p['enabled'] else 'Disabled'}}</td><td>{{'YES' if p['is_default'] else '—'}}</td><td>{{p['base_url'] or '—'}}</td><td>
+    <form method="post" action="/developer-dashboard/payment-providers/test/{{p['id']}}" style="display:inline"><button class="btn btn-white" type="submit">🧪 Test</button></form>
+    <form method="post" action="/developer-dashboard/payment-providers/delete/{{p['id']}}" style="display:inline" onsubmit="return confirm('Ondoa provider hii?');"><button class="btn btn-white" type="submit">🗑</button></form>
+  </td></tr>{% endfor %}</tbody></table></div>{% endif %}
+</div>
+
+<div class="card dev-card" style="margin-bottom:20px;background:#fffaf0">
+  <h3>🛠️ System Error Repair Center</h3>
+  <p class="muted">Andika error/tatizo hapa. Mfumo utatengeneza diagnosis na <strong>safe repair plan</strong> automatically. Kwa usalama, hau-execute arbitrary code au kujibadilisha source code bila ukaguzi.</p>
+  <form method="post" action="/developer-dashboard/repair">
+    <textarea name="issue_text" rows="5" style="width:100%;padding:12px;border:1px solid #bdc9c1;border-radius:9px" placeholder="Mfano: No such column: users.group_id wakati wa register..." required></textarea>
+    <br><br><button class="btn btn-gold" type="submit">⚙️ Generate Repair</button>
+  </form>
+  {% if repair_history %}<div class="table-wrap" style="margin-top:14px"><table class="table"><thead><tr><th>Tatizo</th><th>Diagnosis</th><th>Generated Fix</th><th>Status</th><th>Tarehe</th><th></th></tr></thead><tbody>
+  {% for r in repair_history %}<tr><td>{{r['issue_text']}}</td><td>{{r['diagnosis']}}</td><td><pre style="white-space:pre-wrap">{{r['generated_fix']}}</pre></td><td>{{r['status']}}</td><td>{{r['created_at']}}</td><td>{% if r['status'] != 'applied' %}<form method="post" action="/developer-dashboard/repair/{{r['id']}}/apply" onsubmit="return confirm('Fanya safe repair hii?');"><button class="btn btn-gold">🔧 Apply Safe Fix</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
 </div>
 
 <div class="card dev-card" style="margin-bottom:20px">

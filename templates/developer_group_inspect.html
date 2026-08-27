@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kagua {{group['group_name']}} | Developer</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}">
+<style>
+.page{max-width:1150px;margin:auto;padding:16px 10px}.card{background:#fff;border:1px solid #dce5df;border-radius:14px;padding:14px;margin-bottom:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.stat{background:#f4f7f5;padding:12px;border-radius:10px}.stat b{display:block;font-size:20px;color:#12321c}.muted{color:#617067}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #e7ece9;text-align:left;white-space:nowrap}th{background:#f4f7f5}.private{padding:10px;border-radius:9px;background:#fff7d6;border:1px solid #ead27a;color:#5b4700}
+</style></head><body>
+<nav class="nav"><span class="brand">🔐 DEVELOPER · PRIVATE INSPECTION</span><div class="navlinks"><a href="/developer-dashboard/groups">Vikundi</a><a href="/logout">Toka</a></div></nav>
+<main class="page">
+<div class="card"><h1>🔍 {{group['group_name']}}</h1><div class="private">🔒 PRIVATE: Developer hajaingizwa kwenye kikundi, Group Chat, au conference. Ukurasa huu ni wa ukaguzi wa ndani tu.</div>
+<p>Registration Code: <strong>{{group['registration_code']}}</strong> · Ukomo: <strong>{{group['member_cap']}}</strong></p></div>
+<div class="stats"><div class="stat">👥<b>{{stats['members']}}</b>Wanachama</div><div class="stat">👑<b>{{stats['leaders']}}</b>Viongozi</div><div class="stat">💰<b>{{'{:,.0f}'.format(stats['savings'])}}</b>Akiba</div><div class="stat">💳<b>{{'{:,.0f}'.format(stats['loans'])}}</b>Mikopo</div></div>
+<div class="card"><h2>👥 Wanachama</h2><div class="table-wrap"><table><tr><th>#</th><th>Jina</th><th>Simu</th><th>Role</th><th>Akiba</th><th>Mkopo</th><th>Status</th></tr>
+{% for m in members %}<tr><td>{{m['member_number']}}</td><td>{{m['full_name']}}</td><td>{{m['phone']}}</td><td>{{m['role']}}</td><td>{{'{:,.0f}'.format(m['savings'] or 0)}}</td><td>{{'{:,.0f}'.format(m['loan_balance'] or 0)}}</td><td>{{m['status']}}</td></tr>{% endfor %}
+</table></div></div>
+<div class="card"><h2>💳 Miamala ya Karibuni</h2><div class="table-wrap"><table><tr><th>Member</th><th>Ref</th><th>Aina</th><th>Kiasi</th><th>Status</th><th>Tarehe</th></tr>
+{% for t in recent_transactions %}<tr><td>{{t['full_name']}}</td><td>{{t['tx_ref']}}</td><td>{{t['tx_type']}}</td><td>{{'{:,.0f}'.format(t['amount'])}}</td><td>{{t['status']}}</td><td>{{t['created_at']}}</td></tr>{% endfor %}
+</table></div></div>
+<div class="card"><h2>💬 Group Chat — Read Only</h2>{% for m in recent_messages %}<p><strong>{{m['full_name']}}</strong> · {{m['created_at']}}{% if m['pinned'] %} 📌{% endif %}<br>{{m['body']}}{% if m['media_kind'] %}<br>📎 {{m['media_kind']}}{% endif %}</p><hr>{% else %}<p class="muted">Hakuna ujumbe.</p>{% endfor %}</div>
+</main></body></html>
