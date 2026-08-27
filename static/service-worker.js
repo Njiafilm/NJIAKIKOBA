@@ -1,4 +1,4 @@
-const CACHE = "njiakikoba-v1";
+const CACHE = "njiakikoba-v2";
 const PRECACHE = [
   "/",
   "/static/style.css",
@@ -28,15 +28,15 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(req.url);
 
+  // Static assets: NETWORK-FIRST so deploys show up immediately.
+  // Falls back to cache only when offline.
   if (url.origin === self.location.origin && url.pathname.startsWith("/static/")) {
     event.respondWith(
-      caches.match(req).then(cached =>
-        cached || fetch(req).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(cache => cache.put(req, copy));
-          return res;
-        })
-      )
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(cache => cache.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req))
     );
     return;
   }
