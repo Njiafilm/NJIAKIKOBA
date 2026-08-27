@@ -1,1 +1,99 @@
-<!doctype html><html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NJIAKIKOBA</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body><div style="padding:8px 5%;background:#07111f"><a class="back-btn" href="javascript:history.back()" style="color:#cbd5e1">← Rudi Nyuma</a></div><nav class="topbar"><a class="brand" href="/"><span class="brand-icon">🏘️</span><span class="brand-text">{{ settings['group_name'] or 'NJIAKIKOBA' }}</span></a><div class="topbar-right"><a class="home-nav-btn" href="/">🏠 Home</a><a class="lang-switch" href="/?lang=sw">SW</a><a class="lang-switch" href="/?lang=en">EN</a></div><a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav><main><section class="hero"><div><h1>{{t['hero_title1']}}<br><span>{{t['hero_title2']}}</span></h1><p>{{t['hero_desc']}}</p><div class="hero-actions"><a class="btn" href="/register">{{t['btn_join']}}</a><a class="btn btn-white" href="#works">{{t['btn_learn']}}</a></div></div></section><section class="section"><div class="section-title"><h2>{{t['about_title']}}</h2><p>{{t['about_sub']}}</p></div><div class="cards"><article><h3>{{t['f_secure']}}</h3><p>{{t['f_secure_d']}}</p></article><article><h3>{{t['f_open']}}</h3><p>{{t['f_open_d']}}</p></article><article><h3>{{t['f_easy']}}</h3><p>{{t['f_easy_d']}}</p></article><article><h3>{{t['f_comm']}}</h3><p>{{t['f_comm_d']}}</p></article></div></section><section class="section" id="works"><div class="section-title"><h2>{{t['works_title']}}</h2></div><div class="cards"><article><h3>{{t['w1']}}</h3><p>{{t['w1_d']}}</p></article><article><h3>{{t['w2']}}</h3><p>{{t['w2_d']}}</p></article><article><h3>{{t['w3']}}</h3><p>{{t['w3_d']}}</p></article><article><h3>{{t['w4']}}</h3><p>{{t['w4_d']}}</p></article></div></section></main><footer class="footer"><div class="footer-grid"><div><h3>{{t['contact_title']}}</h3><p>{{t['contact_wa']}}</p></div><div><a href="/login">{{t['nav_login']}}</a> · <a href="/register">{{t['nav_join']}}</a></div></div><p>{{t['copyright'].format(group=settings['group_name'] or 'NJIAKIKOBA')}}</p><a class="dev-hidden-access-bottom" href="/developer-room" aria-label="Developer access" title="Developer"></a></footer></body></html>
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NJIAKIKOBA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="topbar">
+    <a class="brand" href="/" aria-label="NJIAKIKOBA Home">
+      <span class="brand-icon">🏘️</span>
+      <span class="brand-text">{{ settings['group_name'] or 'NJIAKIKOBA' }}</span>
+    </a>
+    <div class="topbar-right">
+      <div class="home-menu-wrap">
+        <button class="home-nav-btn" id="homeMenuBtn" type="button" aria-expanded="false" aria-controls="homeMenu">🏠 {{ t['nav_home'] }} <span class="home-caret">⌄</span></button>
+        <div class="home-menu-panel" id="homeMenu" role="menu">
+          <a href="/" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
+          <a href="#about" role="menuitem">ℹ️ <span>{{ 'Kuhusu' if lang == 'sw' else 'About' }}</span></a>
+          <a href="#contact" role="menuitem">📞 <span>{{ 'Mawasiliano' if lang == 'sw' else 'Contact' }}</span></a>
+        </div>
+      </div>
+      <a class="lang-switch" href="/?lang={{ 'en' if lang == 'sw' else 'sw' }}" aria-label="Switch language">{{ 'SW' if lang == 'sw' else 'EN' }}</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-bg" style="background-image:url('{{ url_for('static', filename='njiakikoba-hero-2.png') }}');"></div>
+      <div class="hero-fade"></div>
+      <div class="hero-content">
+        <h1>{{ t['hero_title1'] }}<span>{{ t['hero_title2'] }}</span></h1>
+        <p>{{ t['hero_desc'] }}</p>
+        <div class="hero-actions">
+          <a class="btn btn-green" href="/register">{{ t['btn_join'] }} <span class="chev">→</span></a>
+          <a class="btn btn-white" href="#works">{{ t['btn_learn'] }} <span class="chev">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <div class="section-title">
+        <h2>{{ t['about_title'] }}</h2>
+        <p>{{ t['about_sub'] }}</p>
+      </div>
+      <div class="cards">
+        <article><h3>{{ t['f_secure'] }}</h3><p>{{ t['f_secure_d'] }}</p></article>
+        <article><h3>{{ t['f_open'] }}</h3><p>{{ t['f_open_d'] }}</p></article>
+        <article><h3>{{ t['f_easy'] }}</h3><p>{{ t['f_easy_d'] }}</p></article>
+        <article><h3>{{ t['f_comm'] }}</h3><p>{{ t['f_comm_d'] }}</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="works">
+      <div class="section-title"><h2>{{ t['works_title'] }}</h2></div>
+      <div class="cards">
+        <article><h3>{{ t['w1'] }}</h3><p>{{ t['w1_d'] }}</p></article>
+        <article><h3>{{ t['w2'] }}</h3><p>{{ t['w2_d'] }}</p></article>
+        <article><h3>{{ t['w3'] }}</h3><p>{{ t['w3_d'] }}</p></article>
+        <article><h3>{{ t['w4'] }}</h3><p>{{ t['w4_d'] }}</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="contact">
+    <div class="footer-grid">
+      <div class="footer-card">
+        <h3>{{ t['contact_title'] }}</h3>
+        <p>{{ t['contact_wa'] }}</p>
+      </div>
+      <div class="footer-card">
+        <h3>{{ t['nav_login'] }}</h3>
+        <a href="/login">{{ t['nav_login'] }}</a>
+        <a href="/register">{{ t['nav_join'] }}</a>
+      </div>
+      <div class="footer-card">
+        <h3>{{ t['trust_title'] }}</h3>
+        <p>{{ t['trust_d'] }}</p>
+      </div>
+    </div>
+    <p class="copyright">{{ t['copyright'].format(group=settings['group_name'] or 'NJIAKIKOBA') }}</p>
+    <!-- Developer login remains here, in its original bottom position, but invisible. -->
+    <a class="dev-hidden-access-bottom" href="/developer-room" aria-label="Developer login" title="Developer login"></a>
+  </footer>
+<script>
+(function(){
+  const btn=document.getElementById('homeMenuBtn');
+  const menu=document.getElementById('homeMenu');
+  if(!btn||!menu)return;
+  function close(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');}
+  btn.addEventListener('click',function(e){e.stopPropagation();const open=!menu.classList.contains('open');menu.classList.toggle('open',open);btn.setAttribute('aria-expanded',open?'true':'false');});
+  menu.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('a'))close();});
+  document.addEventListener('click',close);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
+</body>
+</html>
