@@ -84,6 +84,20 @@ ALLOWED_CHAT_MIMES = {
     "video/webm", "video/mp4", "video/quicktime"
 }
 
+def normalize_tz_phone(value):
+    """Normalize Tanzania phone input to canonical 255XXXXXXXXX format."""
+    raw = re.sub(r"\D", "", str(value or ""))
+    if raw.startswith("00"):
+        raw = raw[2:]
+    if raw.startswith("0") and len(raw) == 10:
+        raw = "255" + raw[1:]
+    elif raw.startswith("7") and len(raw) == 9:
+        raw = "255" + raw
+    elif raw.startswith("6") and len(raw) == 9:
+        raw = "255" + raw
+    return raw
+
+
 def save_chat_media(file_storage):
     """Save a chat image/audio/video with a random server filename."""
     if not file_storage or not file_storage.filename:
@@ -291,6 +305,7 @@ def init_db():
         "ALTER TABLE group_info ADD COLUMN partner_account_details TEXT",
         "ALTER TABLE group_info ADD COLUMN cycle_months INTEGER DEFAULT 12",
         "ALTER TABLE group_info ADD COLUMN cycle_started_at TEXT",
+        "ALTER TABLE group_info ADD COLUMN whatsapp_group_url TEXT",
         "ALTER TABLE group_info ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE users ADD COLUMN member_number INTEGER",
         "ALTER TABLE users ADD COLUMN group_size_at_join INTEGER",
@@ -318,11 +333,17 @@ def init_db():
     groups = conn.execute("SELECT id, registration_code, video_room FROM group_info ORDER BY id").fetchall()
     for g in groups:
         if not g["registration_code"]:
-            code = f"NK-{g['id']:015d}"
+            code = f"NK-{g['id']:04d}"
             conn.execute("UPDATE group_info SET registration_code=? WHERE id=?", (code, g["id"]))
         if not g["video_room"]:
             room = "Njiakikoba-" + secrets.token_urlsafe(18).replace("-", "").replace("_", "")
             conn.execute("UPDATE group_info SET video_room=? WHERE id=?", (room, g["id"]))
+
+    # Normalize all group registration codes to the public NK-0001 format.
+    for g in conn.execute("SELECT id, registration_code FROM group_info ORDER BY id").fetchall():
+        desired = f"NK-{g['id']:04d}"
+        if g["registration_code"] != desired:
+            conn.execute("UPDATE group_info SET registration_code=? WHERE id=?", (desired, g["id"]))
 
     # Give legacy rows the first group.
     first_group = conn.execute("SELECT id FROM group_info ORDER BY id LIMIT 1").fetchone()
@@ -442,7 +463,7 @@ def home():
 def register():
     if request.method == "POST":
         name = request.form.get("full_name", "").strip()
-        phone = request.form.get("phone", "").strip()
+        phone = normalize_tz_phone(request.form.get("phone", ""))
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         code = request.form.get("group_code", "").strip()
@@ -458,7 +479,7 @@ def register():
             flash("Registration Code ya kikundi haijatambuliwa.", "danger")
             return render_template("register.html")
 
-        member_cap = min(int(group["member_cap"] or 999), 999)
+        member_cap = max(1, int(group["member_cap"] or 999))
         current_total = group_member_count(conn, group["id"])
         if current_total >= member_cap:
             conn.close()
@@ -494,7 +515,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        phone = request.form.get("phone", "").strip()
+        phone = normalize_tz_phone(request.form.get("phone", ""))
         password = request.form.get("password", "")
         conn = db()
         user = conn.execute("SELECT * FROM users WHERE phone=?", (phone,)).fetchone()
@@ -543,7 +564,7 @@ def register_leaders():
     if request.method == "POST":
         title = request.form.get("leader_title", "Kiongozi").strip()[:40]
         name = request.form.get("full_name", "").strip()
-        phone = request.form.get("phone", "").strip()
+        phone = normalize_tz_phone(request.form.get("phone", ""))
         id_type = request.form.get("id_type", "")
         id_number = request.form.get("id_number", "").strip()
         password = request.form.get("password", "")
@@ -569,7 +590,7 @@ def register_leaders():
             return render_template("register_leaders.html")
 
         current_total = group_member_count(conn, group["id"])
-        member_cap = min(int(group["member_cap"] or 999), 999)
+        member_cap = max(1, int(group["member_cap"] or 999))
         if current_total >= member_cap:
             conn.close()
             flash(f"{group['group_name']} imefikia ukomo wa wanachama {member_cap}.", "danger")
@@ -652,7 +673,7 @@ def developer_dashboard():
         """SELECT adsense_publisher_id, play_store_url, appstore_url, group_name,
                   registration_code, member_cap, settlement_phone, settlement_bank_name,
                   settlement_bank_account, partner_name, partner_contact,
-                  partner_account_details, cycle_months, cycle_started_at
+                  partner_account_details, cycle_months, cycle_started_at, whatsapp_group_url
            FROM group_info ORDER BY id LIMIT 1"""
     ).fetchone()
     counts = {
@@ -676,7 +697,7 @@ def developer_dashboard():
         "SELECT id, issue_text, diagnosis, generated_fix, status, created_at, applied_at FROM developer_repairs ORDER BY id DESC LIMIT 20"
     ).fetchall()
     groups = conn.execute(
-        """SELECT g.id, g.group_name, g.registration_code, g.member_cap,
+        """SELECT g.id, g.group_name, g.registration_code, g.member_cap, g.whatsapp_group_url,
                   COUNT(u.id) AS member_count,
                   COALESCE(SUM(u.savings),0) AS savings,
                   COALESCE(SUM(u.loan_balance),0) AS loans
@@ -701,12 +722,18 @@ def developer_groups():
     if request.method == "POST":
         group_name = request.form.get("group_name", "").strip()[:100]
         cap_raw = request.form.get("member_cap", "999").strip()
+        whatsapp_group_url = request.form.get("whatsapp_group_url", "").strip()
 
         try:
-            cap = min(max(1, int(cap_raw)), 999)
+            cap = min(max(1, int(cap_raw)), 9999)
         except ValueError:
             conn.close()
-            flash("Ukomo wa wanachama lazima uwe namba kati ya 1 na 999.", "danger")
+            flash("Ukomo wa wanachama lazima uwe namba kati ya 1 na 9999.", "danger")
+            return redirect(url_for("developer_groups"))
+
+        if whatsapp_group_url and not whatsapp_group_url.startswith("https://chat.whatsapp.com/"):
+            conn.close()
+            flash("Link ya WhatsApp ya kikundi lazima ianze na https://chat.whatsapp.com/.", "danger")
             return redirect(url_for("developer_groups"))
 
         if not group_name:
@@ -716,11 +743,11 @@ def developer_groups():
 
         try:
             cur = conn.execute(
-                "INSERT INTO group_info (group_name, member_cap, payment_number) VALUES (?, ?, ?)",
-                (group_name, cap, os.environ.get("GROUP_PAYMENT_NUMBER"))
+                "INSERT INTO group_info (group_name, member_cap, payment_number, whatsapp_group_url) VALUES (?, ?, ?, ?)",
+                (group_name, cap, os.environ.get("GROUP_PAYMENT_NUMBER"), whatsapp_group_url or None)
             )
             gid = cur.lastrowid
-            code = f"NK-{gid:015d}"
+            code = f"NK-{gid:04d}"
             room = "Njiakikoba-" + secrets.token_urlsafe(18).replace("-", "").replace("_", "")
             conn.execute(
                 "UPDATE group_info SET registration_code=?, video_room=? WHERE id=?",
@@ -737,7 +764,7 @@ def developer_groups():
 
     groups = conn.execute(
         """SELECT g.id, g.group_name, g.registration_code, g.member_cap,
-                  g.video_room, g.created_at,
+                  g.video_room, g.whatsapp_group_url, g.created_at,
                   COUNT(u.id) AS member_count,
                   SUM(CASE WHEN u.role='leader' THEN 1 ELSE 0 END) AS leader_count,
                   COALESCE(SUM(u.savings),0) AS savings,
@@ -804,6 +831,31 @@ def developer_group_inspect(group_id):
     )
 
 
+@app.route("/developer-dashboard/upgrade", methods=["POST"])
+@developer_required
+def developer_upgrade():
+    group_id = request.form.get("group_id", type=int)
+    try:
+        new_cap = int(request.form.get("member_cap", "0"))
+    except ValueError:
+        new_cap = 0
+    if not group_id or not (1 <= new_cap <= 9999):
+        flash("Upgrade lazima ichague kikundi na ukomo wa 1 hadi 9,999.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    conn = db()
+    current = conn.execute("SELECT group_name FROM group_info WHERE id=?", (group_id,)).fetchone()
+    if not current:
+        conn.close(); flash("Kikundi hakipo.", "danger"); return redirect(url_for("developer_dashboard"))
+    total = conn.execute("SELECT COUNT(*) FROM users WHERE group_id=? AND status='active'", (group_id,)).fetchone()[0]
+    if new_cap < total:
+        conn.close(); flash(f"Upgrade haiwezi kuweka ukomo chini ya wanachama waliopo ({total}).", "danger"); return redirect(url_for("developer_dashboard"))
+    conn.execute("UPDATE group_info SET member_cap=? WHERE id=?", (new_cap, group_id))
+    conn.execute("INSERT INTO system_logs(level,message) VALUES('INFO',?)", (f"Developer upgraded {current['group_name']} member cap to {new_cap}.",))
+    conn.commit(); conn.close()
+    flash(f"{current['group_name']} ime-upgradeiwa hadi wanachama {new_cap}.", "success")
+    return redirect(url_for("developer_dashboard"))
+
+
 @app.route("/developer-dashboard/end-cycle", methods=["POST"])
 @developer_required
 def end_cycle():
@@ -855,6 +907,7 @@ def developer_settings_update():
     partner_contact = request.form.get("partner_contact", "").strip()
     partner_account_details = request.form.get("partner_account_details", "").strip()
     cycle_months_raw = request.form.get("cycle_months", "12").strip()
+    whatsapp_group_url = request.form.get("whatsapp_group_url", "").strip()
     selected_group_id = request.form.get("group_id", type=int)
 
     # Basic sanity checks — don't save obviously malformed values.
@@ -867,6 +920,9 @@ def developer_settings_update():
             return redirect(url_for("developer_dashboard"))
     if settlement_phone and not re.fullmatch(r"255\d{9}", settlement_phone):
         flash("Namba ya simu ya kikundi lazima iwe mfumo 255XXXXXXXXX.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    if whatsapp_group_url and not whatsapp_group_url.startswith("https://chat.whatsapp.com/"):
+        flash("Link ya WhatsApp ya kikundi lazima ianze na https://chat.whatsapp.com/.", "danger")
         return redirect(url_for("developer_dashboard"))
     if cycle_months_raw not in ("3", "6", "9", "12"):
         flash("Muda wa mzunguko lazima uwe miezi 3, 6, 9, au 12.", "danger")
@@ -900,12 +956,12 @@ def developer_settings_update():
     conn.execute(
         "UPDATE group_info SET adsense_publisher_id=?, play_store_url=?, appstore_url=?, group_name=?, "
         "settlement_phone=?, settlement_bank_name=?, settlement_bank_account=?, "
-        "partner_name=?, partner_contact=?, partner_account_details=?, cycle_months=? "
+        "partner_name=?, partner_contact=?, partner_account_details=?, cycle_months=?, whatsapp_group_url=? "
         "WHERE id=?",
         (adsense_id or None, play_store or None, appstore or None, group_name or "NJIAKIKOBA",
          settlement_phone or None, settlement_bank_name or None, settlement_bank_account or None,
          partner_name or None, partner_contact or None, partner_account_details or None,
-         int(cycle_months_raw), target_group_id)
+         int(cycle_months_raw), whatsapp_group_url or None, target_group_id)
     )
     conn.commit()
     conn.close()
@@ -1166,7 +1222,7 @@ def group_chat():
         (session["user_id"],)
     ).fetchone()
     group = conn.execute(
-        "SELECT id, group_name, registration_code, member_cap FROM group_info WHERE id=?",
+        "SELECT id, group_name, registration_code, member_cap, whatsapp_group_url FROM group_info WHERE id=?",
         (actor["group_id"],)
     ).fetchone()
 
@@ -1220,22 +1276,15 @@ def group_chat():
 @app.route("/group-chat/whatsapp/<int:member_id>")
 @member_required
 def group_member_whatsapp(member_id):
+    # Backward-compatible route: always opens the current group's WhatsApp, never a developer contact.
     conn = db()
-    actor = conn.execute(
-        "SELECT group_id FROM users WHERE id=? AND status='active'", (session["user_id"],)
-    ).fetchone()
-    member = conn.execute(
-        "SELECT full_name, phone, group_id FROM users WHERE id=? AND status='active'", (member_id,)
-    ).fetchone()
+    actor = conn.execute("SELECT group_id FROM users WHERE id=? AND status='active'", (session["user_id"],)).fetchone()
+    group = conn.execute("SELECT whatsapp_group_url FROM group_info WHERE id=?", (actor["group_id"],)).fetchone() if actor else None
     conn.close()
-    if not actor or not member or member["group_id"] != actor["group_id"]:
-        return "Mwanachama hayupo kwenye kikundi chako.", 403
-    raw = re.sub(r"\D", "", member["phone"] or "")
-    if raw.startswith("0"):
-        raw = "255" + raw[1:]
-    elif not raw.startswith("255"):
-        raw = "255" + raw
-    return redirect("https://wa.me/" + raw)
+    if not actor or not group or not group["whatsapp_group_url"]:
+        flash("Kikundi hiki bado hakijawekewa WhatsApp Group link.", "warning")
+        return redirect(url_for("group_chat"))
+    return redirect(group["whatsapp_group_url"])
 
 
 @app.route("/group-chat/delete/<int:message_id>", methods=["POST"])
@@ -1467,6 +1516,39 @@ def build_repair(issue_text):
         code.append("# REVIEW REQUIRED — no automatic source modification")
     fix="\n".join(code)
     return " ".join(diagnosis), " ".join(actions), fix
+
+
+@app.route("/developer-dashboard/command", methods=["POST"])
+@developer_required
+def developer_command():
+    command = request.form.get("command", "").strip().upper()
+    issue = request.form.get("issue_text", "").strip()
+    commands = {
+        "RUN_SYSTEM_HEALTH": "Kagua database, migrations, templates na configuration bila kubadilisha data.",
+        "REPAIR_DATABASE": "Kimbiza init_db() na migrations/backfills salama.",
+        "CHECK_PHONE_VALIDATION": "Thibitisha na kutumia normalization ya Tanzania 255XXXXXXXXX, pamoja na +255 na 0XXXXXXXXX.",
+        "REPAIR_CERTIFICATE_PAGE": "Kagua route /certificate na template certificate.html; rekebisha missing-template error.",
+        "CHECK_PUBLIC_DEVELOPER_LEAKS": "Tafuta links/text za Developer kwenye public UI na kuziondoa bila kugusa Developer Room.",
+        "CHECK_GROUP_WHATSAPP": "Kagua WhatsApp Group link ya kila kikundi na kuhakikisha inatumika kwa group husika.",
+        "HARDWARE_DIAGNOSTIC": "Hardware diagnostic ya browser/device: camera, microphone, storage na connectivity. Hakuna command inayoweza kuendesha code ya kifaa moja kwa moja.",
+        "HARDWARE_REPAIR": "Hardware repair workflow: kagua permissions, camera/microphone, storage, browser cache na connectivity; hatua za kifaa zinafanywa na mtumiaji/technician, si server.",
+        "SOFTWARE_REPAIR": "Safe software repair: migrations, template checks, validation checks na system logs; hakuna arbitrary exec().",
+    }
+    if command not in commands:
+        flash("Command haijatambuliwa. Chagua command iliyopo kwenye Developer Room.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    plan = commands[command]
+    if issue:
+        diagnosis, actions, fix = build_repair(issue)
+        plan += " " + diagnosis + " " + actions
+        generated = fix
+    else:
+        generated = command
+    conn = db()
+    cur = conn.execute("INSERT INTO developer_repairs (issue_text,diagnosis,generated_fix,status) VALUES (?,?,?, 'generated')", (issue or command, plan, generated))
+    conn.commit(); conn.close()
+    flash(f"Command {command} imeandaliwa. Review plan kabla ya Apply Safe Fix.", "success")
+    return redirect(url_for("developer_dashboard", repair_id=cur.lastrowid))
 
 
 @app.route("/developer-dashboard/repair", methods=["POST"])
