@@ -349,3 +349,47 @@ body{overflow-x:hidden}
 @media(max-width:600px){.footer .footer-grid{grid-template-columns:1fr;max-width:none}.copyright-line{gap:5px}.developer-dot{width:10px}}
 /* Make the supplied Hero image explicit so it remains visible on mobile and production hosts. */
 .hero-bg{background-repeat:no-repeat;background-color:#07351f;background-position:center center;background-size:cover}
+
+/* ===== Dashboard v2 — professional financial-platform look (navy + gold) ===== */
+.dash2-wrap{padding-top:26px}
+.dash2-banner{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;background:linear-gradient(120deg,var(--navy) 0%,#16264a 100%);border-radius:20px;padding:26px 30px;box-shadow:0 16px 40px rgba(11,21,41,.18);margin-bottom:22px}
+.dash2-banner-left{display:flex;align-items:center;gap:18px}
+.dash2-avatar{width:58px;height:58px;border-radius:16px;background:linear-gradient(135deg,var(--gold) 0%,#e0993a 100%);color:#12321c;font-weight:800;font-size:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 18px rgba(242,181,68,.35)}
+.dash2-eyebrow{margin:0;color:#aebbd4;font-size:13px;font-weight:600;letter-spacing:.2px}
+.dash2-name{margin:2px 0 10px;color:#fff;font-size:26px;letter-spacing:-.5px;font-weight:800}
+.dash2-tags{display:flex;flex-wrap:wrap;gap:8px}
+.dash2-tag{background:rgba(255,255,255,.08);color:#dfe7f3;border:1px solid rgba(255,255,255,.12);padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:650}
+.dash2-tag-gold{background:rgba(242,181,68,.15);border-color:rgba(242,181,68,.35);color:var(--gold)}
+.dash2-banner-right{display:flex;gap:10px;flex-wrap:wrap}
+.dash2-banner-right .btn-outline{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.25);color:#fff}
+
+.dash2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.dash2-stat{background:#fff;border:1px solid #e6ebf2;border-radius:16px;padding:20px;display:flex;align-items:center;gap:14px;box-shadow:0 10px 26px rgba(11,21,41,.05);border-left:4px solid transparent}
+.dash2-stat-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.dash2-stat--savings{border-left-color:var(--green)}.dash2-stat--savings .dash2-stat-ico{background:rgba(22,180,74,.12)}
+.dash2-stat--loan{border-left-color:#e0522d}.dash2-stat--loan .dash2-stat-ico{background:rgba(224,82,45,.12)}
+.dash2-stat--secure{border-left-color:var(--gold)}.dash2-stat--secure .dash2-stat-ico{background:rgba(242,181,68,.15)}
+.dash2-stat--tx{border-left-color:var(--navy)}.dash2-stat--tx .dash2-stat-ico{background:rgba(11,21,41,.08)}
+.dash2-stat-label{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:650;text-transform:uppercase;letter-spacing:.4px}
+.dash2-stat-value{font-size:20px;letter-spacing:-.4px;color:var(--text)}
+
+.dash2-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.dash2-quick-item{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1px solid #e6ebf2;border-radius:13px;padding:14px 10px;font-weight:700;font-size:13.5px;color:var(--text);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.dash2-quick-item span{font-size:17px}
+.dash2-quick-item:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(11,21,41,.08);color:var(--navy)}
+
+.dash2-card{margin-bottom:20px}
+.dash2-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dash2-badge-lock{background:#ecfdf3;color:#067647;border:1px solid #c7f0d8;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+.dash2-card-actions{display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+
+.dash2-mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--muted)}
+.dash2-status{display:inline-block;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;text-transform:capitalize}
+.dash2-status--paid{background:#ecfdf3;color:#067647}
+.dash2-status--pending{background:#fff8e6;color:#8a6100}
+.dash2-status--failed{background:#fff0f0;color:#9b1c1c}
+.dash2-receipt-link{color:var(--navy);font-weight:700}
+.dash2-empty{text-align:center;color:var(--muted);padding:26px 10px !important}
+
+@media(max-width:900px){.dash2-stats{grid-template-columns:1fr 1fr}.dash2-quick{grid-template-columns:1fr 1fr}.dash2-banner{padding:22px}}
+@media(max-width:600px){.dash2-stats{grid-template-columns:1fr}.dash2-quick{grid-template-columns:1fr 1fr}.dash2-banner{flex-direction:column;align-items:flex-start}.dash2-banner-right{width:100%}.dash2-banner-right .btn{flex:1}.dash2-name{font-size:22px}}
