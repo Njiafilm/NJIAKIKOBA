@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingia Kiongozi | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="nav">
+  <a class="brand" href="/"><img src="/static/njiakikoba-hero.png"> NJIAKIKOBA</a>
+  <div class="navlinks"><a href="/login">Ingia Mwanachama</a><a href="/register-leaders">Sajili Kiongozi</a></div>
+  <a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a>
+</nav>
+<main class="auth">
+<form class="form-card" method="post">
+  <h1>👑 Ingia Kiongozi wa Kikundi</h1>
+  <p class="muted">Karibu tena. Ingia kusimamia majukumu ya kikundi chako.</p>
+  {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+  <label>Namba ya simu</label>
+  <input name="phone" inputmode="tel" autocomplete="tel" required>
+  <label>Nywila</label>
+  <div class="password-row"><input name="password" type="password" autocomplete="current-password" required><button type="button" class="show-password" onclick="togglePassword(this)">👁 Onyesha</button></div>
+  <br><br><button class="btn btn-dark" type="submit">Ingia kama Kiongozi</button>
+  <p class="muted">Bado hujasajiliwa kama kiongozi? <a href="/register-leaders">Sajili hapa</a></p>
+</form>
+</main>
+<script>function togglePassword(btn){const input=btn.parentElement.querySelector('input');if(!input)return;const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁 Onyesha':'🙈 Ficha';}</script>
+</body></html>

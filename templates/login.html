@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 </head><body>
-<nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero-2.png"> NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/register">Jiunge</a></div><a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav>
+<nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero.png"> NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/register">Jiunge</a></div><a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav>
 <main class="auth"><form class="form-card" method="post"><h1>Karibu Tena</h1><p class="muted">Ingia kwenye akaunti yako.</p>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
 <label>Namba ya simu</label><input name="phone" inputmode="tel" required>

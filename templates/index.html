@@ -22,8 +22,10 @@
           <a href="/" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
           <a href="#about" role="menuitem">ℹ️ <span>{{ 'Kuhusu' if lang == 'sw' else 'About' }}</span></a>
           <a href="#contact" role="menuitem">📞 <span>{{ 'Mawasiliano' if lang == 'sw' else 'Contact' }}</span></a>
-          <a href="/login" role="menuitem">🔐 <span>{{ t['nav_login'] }}</span></a>
+          <a href="/login" role="menuitem">🔐 <span>Ingia Mwanachama</span></a>
+          <a href="/leader-login" role="menuitem">👑 <span>Ingia Kiongozi wa Kikundi</span></a>
           <a href="/register" role="menuitem">👥 <span>{{ t['nav_join'] }}</span></a>
+          <a href="/register-leaders" role="menuitem">📝 <span>Sajili Kiongozi</span></a>
         </div>
       </div>
       <a class="lang-switch" href="/?lang={{ 'en' if lang == 'sw' else 'sw' }}" aria-label="Switch language">{{ 'SW' if lang == 'sw' else 'EN' }}</a>
@@ -32,7 +34,7 @@
 
   <main>
     <section class="hero">
-      <div class="hero-bg" style="background-image:url('{{ url_for('static', filename='njiakikoba-hero-2.png') }}');"></div>
+      <div class="hero-bg" style="background-image:url('{{ url_for('static', filename='njiakikoba-hero.png') }}');"></div>
       <div class="hero-fade"></div>
       <div class="hero-content">
         <h1>{{ t['hero_title1'] }}<span>{{ t['hero_title2'] }}</span></h1>
