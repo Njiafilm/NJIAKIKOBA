@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Risiti | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="cert-body">
+<div class="cert-toolbar no-print">
+  <a href="/dashboard" class="back-btn">← Rudi Dashboard</a>
+  <button onclick="window.print()">🖨 Chapisha / Hifadhi PDF</button>
+</div>
+
+<div class="certificate receipt-card">
+  <div class="cert-header">
+    <span class="cert-logo">💰</span>
+    <h1>{{ group["group_name"] if group and group["group_name"] else "NJIAKIKOBA" }}</h1>
+    <p class="cert-sub">Risiti ya Malipo</p>
+  </div>
+
+  <div class="receipt-status">✅ IMELIPWA</div>
+
+  <table class="receipt-table">
+    <tr><td>Namba ya Muamala</td><td><strong>{{ tx["tx_ref"] }}</strong></td></tr>
+    <tr><td>Aina ya Muamala</td><td>{{ tx["tx_type"] }}</td></tr>
+    <tr><td>Jina la Mlipaji</td><td>{{ user["full_name"] }}</td></tr>
+    <tr><td>Namba ya Mwanachama</td><td>{{ "%06d"|format(user["member_number"]) }}</td></tr>
+    <tr><td>Kiasi</td><td>TZS {{ "{:,.0f}".format(tx["amount"]) }}</td></tr>
+    <tr><td>Ada ya Mfumo (2%)</td><td>TZS {{ "{:,.0f}".format(tx["commission"]) }}</td></tr>
+    <tr><td>Kwenda Kikundi (98%)</td><td>TZS {{ "{:,.0f}".format(tx["group_amount"]) }}</td></tr>
+    <tr><td>Tarehe</td><td>{{ tx["created_at"] }}</td></tr>
+    {% if group and group["registration_code"] %}<tr><td>Namba ya Usajili ya Kikundi</td><td>{{ group["registration_code"] }}</td></tr>{% endif %}
+  </table>
+
+  <p class="cert-footer">Risiti hii imetolewa kiotomatiki na mfumo. Asante kwa kutumia NJIAKIKOBA! 🙏</p>
+</div>
+</body>
+</html>
