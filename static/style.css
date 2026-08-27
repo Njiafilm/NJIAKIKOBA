@@ -282,3 +282,31 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 .dev-hidden-access{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:4px;color:transparent!important;background:transparent;border:0;text-decoration:none;opacity:.01;cursor:pointer;user-select:none}
 .dev-hidden-access:hover,.dev-hidden-access:focus{opacity:.03;outline:none}
 .topbar .dev-hidden-access{position:absolute;right:6px;top:6px}
+
+/* ===== Homepage mobile contrast/layout repair ===== */
+body{overflow-x:hidden}
+.hero{
+  background:
+    radial-gradient(circle at 78% 24%, rgba(31,157,60,.20), transparent 34%),
+    linear-gradient(135deg,#071b12 0%,#0a2b16 48%,#102f1d 100%) !important;
+  color:#fff;
+  min-height:650px;
+  align-items:center;
+}
+.hero > div{position:relative;z-index:2}
+.hero h1{color:#fff !important;text-shadow:0 2px 18px rgba(0,0,0,.22)}
+.hero h1 span{
+  display:inline-block;
+  color:var(--hg-gold) !important;
+  background:none !important;
+  -webkit-text-fill-color:initial !important;
+}
+.hero p{color:#e5eee8 !important}
+.hero-actions .btn{color:#fff}
+.hero-actions .btn-white{color:#12321c !important}
+@media(max-width:600px){
+  .hero{min-height:650px;padding:48px 6% 56px !important}
+  .hero h1{font-size:clamp(38px,11vw,52px) !important;line-height:1.02 !important;letter-spacing:-1.8px !important;max-width:100%}
+  .hero p{font-size:16px !important;line-height:1.6 !important;max-width:100%}
+  .hero-actions{max-width:100% !important}
+}
