@@ -1,0 +1,13 @@
+NJIAKIKOBA PWA
+================
+
+PWA support has been added without replacing the existing application UI.
+
+Android installation:
+1. Open the deployed NJIAKIKOBA site in Chrome.
+2. Open the browser menu.
+3. Choose "Install app" or "Add to Home screen" when available.
+4. Launch NJIAKIKOBA from the phone home screen.
+
+The installed app uses standalone display, so the normal browser address bar
+is not shown in the installed-app window.
