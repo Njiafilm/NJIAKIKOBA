@@ -286,12 +286,10 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 /* ===== Homepage mobile contrast/layout repair ===== */
 body{overflow-x:hidden}
 .hero{
-  background:
-    radial-gradient(circle at 78% 24%, rgba(31,157,60,.20), transparent 34%),
-    linear-gradient(135deg,#071b12 0%,#0a2b16 48%,#102f1d 100%) !important;
   color:#fff;
   min-height:650px;
   align-items:center;
+  background:none !important;
 }
 .hero > div{position:relative;z-index:2}
 .hero h1{color:#fff !important;text-shadow:0 2px 18px rgba(0,0,0,.22)}
@@ -319,3 +317,23 @@ body{overflow-x:hidden}
 .dev-hidden-access-bottom{position:absolute;right:6px;bottom:6px;width:28px;height:28px;display:block;background:transparent;color:transparent!important;opacity:0;cursor:pointer;z-index:20}
 .dev-hidden-access-bottom:focus{outline:none}
 @media(max-width:600px){.home-nav-btn{padding:5px 9px;font-size:12px}}
+
+
+/* Professional single language toggle */
+.topbar-right{display:flex;align-items:center;gap:10px}
+.lang-switch{min-width:48px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;border:1px solid rgba(232,185,35,.55);border-radius:10px;background:rgba(255,255,255,.06);color:var(--hg-gold)!important;font-size:13px;font-weight:850;letter-spacing:.4px;transition:all .2s ease;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.lang-switch:hover{background:rgba(232,185,35,.14);border-color:var(--hg-gold);transform:translateY(-1px)}
+.lang-switch:focus-visible{outline:2px solid var(--hg-gold);outline-offset:2px}
+@media(max-width:600px){.topbar-right{gap:7px}.lang-switch{min-width:44px;height:34px;padding:0 11px;border-radius:9px;font-size:12px}}
+
+/* ===== Professional Home menu: only Mwanzo, Kuhusu and Mawasiliano ===== */
+.home-menu-wrap{position:relative}
+.home-nav-btn{gap:7px;cursor:pointer}
+.home-caret{font-size:15px;line-height:1;transition:transform .18s ease}
+.home-menu-wrap:has(.home-menu-panel.open) .home-caret{transform:rotate(180deg)}
+.home-menu-panel{position:absolute;top:calc(100% + 10px);right:0;min-width:210px;padding:7px;background:linear-gradient(180deg,#0e3a1c 0%,#0a2b16 100%);border:1px solid rgba(232,185,35,.22);border-radius:13px;box-shadow:0 18px 45px rgba(0,0,0,.35);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .18s ease,transform .18s ease,visibility .18s ease;z-index:100}
+.home-menu-panel.open{opacity:1;visibility:visible;transform:translateY(0)}
+.home-menu-panel a{display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:9px;color:#edf7ef;font-size:14px;font-weight:700}
+.home-menu-panel a:hover{background:rgba(232,185,35,.12);color:var(--hg-gold)}
+.home-menu-panel a+ a{margin-top:2px}
+@media(max-width:600px){.home-menu-panel{right:-20px;min-width:190px}.home-nav-btn{padding:5px 9px;font-size:12px}}
