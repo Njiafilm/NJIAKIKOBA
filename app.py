@@ -533,6 +533,28 @@ def login():
     return render_template("login.html")
 
 
+@app.route("/leader-login", methods=["GET", "POST"])
+def leader_login():
+    """Dedicated leader login; it never grants leader access to ordinary members."""
+    if request.method == "POST":
+        phone = normalize_tz_phone(request.form.get("phone", ""))
+        password = request.form.get("password", "")
+        conn = db()
+        user = conn.execute("SELECT * FROM users WHERE phone=? AND role='leader'", (phone,)).fetchone()
+        conn.close()
+        if user and user["status"] == "active" and check_password_hash(user["password"], password):
+            session.clear()
+            session.permanent = True
+            session["user_id"] = user["id"]
+            session["full_name"] = user["full_name"]
+            session["role"] = user["role"]
+            session["group_id"] = user["group_id"]
+            return redirect(url_for("dashboard"))
+        log_event("leader_login_failed", "Failed leader login")
+        flash("Taarifa za kiongozi si sahihi.", "danger")
+    return render_template("leader_login.html")
+
+
 @app.route("/dashboard")
 @member_required
 def dashboard():
