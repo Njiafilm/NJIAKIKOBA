@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a2b16">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <title>NJIAKIKOBA</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -19,6 +22,8 @@
           <a href="/" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
           <a href="#about" role="menuitem">ℹ️ <span>{{ 'Kuhusu' if lang == 'sw' else 'About' }}</span></a>
           <a href="#contact" role="menuitem">📞 <span>{{ 'Mawasiliano' if lang == 'sw' else 'Contact' }}</span></a>
+          <a href="/login" role="menuitem">🔐 <span>{{ t['nav_login'] }}</span></a>
+          <a href="/register" role="menuitem">👥 <span>{{ t['nav_join'] }}</span></a>
         </div>
       </div>
       <a class="lang-switch" href="/?lang={{ 'en' if lang == 'sw' else 'sw' }}" aria-label="Switch language">{{ 'SW' if lang == 'sw' else 'EN' }}</a>
@@ -67,21 +72,18 @@
     <div class="footer-grid">
       <div class="footer-card">
         <h3>{{ t['contact_title'] }}</h3>
+        <a class="footer-contact-link" href="mailto:gsdtech20@gmail.com">{{ t['contact_email'] }}: gsdtech20@gmail.com</a>
         <p>{{ t['contact_wa'] }}</p>
-      </div>
-      <div class="footer-card">
-        <h3>{{ t['nav_login'] }}</h3>
-        <a href="/login">{{ t['nav_login'] }}</a>
-        <a href="/register">{{ t['nav_join'] }}</a>
       </div>
       <div class="footer-card">
         <h3>{{ t['trust_title'] }}</h3>
         <p>{{ t['trust_d'] }}</p>
       </div>
     </div>
-    <p class="copyright">{{ t['copyright'].format(group=settings['group_name'] or 'NJIAKIKOBA') }}</p>
-    <!-- Developer login remains here, in its original bottom position, but invisible. -->
-    <a class="dev-hidden-access-bottom" href="/developer-room" aria-label="Developer login" title="Developer login"></a>
+    <div class="copyright-line">
+      <p class="copyright">{{ t['copyright'].format(group=settings['group_name'] or 'NJIAKIKOBA') }}</p>
+      <a class="developer-dot" href="/developer-room" aria-label="Developer login" title="Developer login">•</a>
+    </div>
   </footer>
 <script>
 (function(){
@@ -93,6 +95,16 @@
   menu.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('a'))close();});
   document.addEventListener('click',close);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
+<script>
+(function(){
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("/static/service-worker.js", {scope:"/"})
+        .catch(function(){});
+    });
+  }
 })();
 </script>
 </body>
