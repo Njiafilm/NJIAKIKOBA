@@ -49,7 +49,7 @@ textarea{width:100%;min-height:70px;resize:vertical;border:1px solid #bdc9c1;bor
     <a class="back-btn" href="javascript:history.back()">← Rudi</a>
     <a href="/logout">Toka</a>
   </div>
-</nav>
+<a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav>
 
 <main class="chat-page">
 <section class="chat-card">
@@ -74,7 +74,6 @@ textarea{width:100%;min-height:70px;resize:vertical;border:1px solid #bdc9c1;bor
         <div class="msg-name">
           {{msg['full_name']}}
           {% if msg['role']=='leader' %}<span class="badge">KIONGOZI</span>{% endif %}
-          {% if msg['role']=='developer' %}<span class="badge badge-dev">DEVELOPER</span>{% endif %}
           {% if msg['pinned'] %}<span class="badge">📌 PIN</span>{% endif %}
         </div>
         <time class="msg-time">{{msg['created_at']}}</time>
@@ -133,18 +132,13 @@ textarea{width:100%;min-height:70px;resize:vertical;border:1px solid #bdc9c1;bor
   </form>
 </section>
   <section class="chat-card" style="margin-top:14px">
-    <h2 style="margin:0;color:#12321c">📱 WhatsApp ya Wanakikundi</h2>
-    <p class="chat-sub">Namba zinazoonekana hapa ni za wanachama wa <strong>{{ group["group_name"] }}</strong> pekee.</p>
-    <div style="display:grid;gap:8px;margin-top:10px">
-      {% for member in members %}
-        <a href="{{ url_for('group_member_whatsapp', member_id=member['id']) }}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid #dce5df;border-radius:10px;text-decoration:none;background:#f8fbf9;color:#17231c">
-          <span><strong>{{ member['full_name'] }}</strong>{% if member['role']=='leader' %} <span class="badge">KIONGOZI</span>{% endif %}<br><span style="color:#53645b">📞 {{ member['phone'] }}</span></span>
-          <span style="font-weight:900;color:#0e7a34">💬 WhatsApp</span>
-        </a>
-      {% else %}
-        <div class="muted">Hakuna wanachama hai waliopo kwenye kikundi.</div>
-      {% endfor %}
-    </div>
+    <h2 style="margin:0;color:#12321c">📱 WhatsApp ya {{ group["group_name"] }}</h2>
+    <p class="chat-sub">Kila kikundi kina WhatsApp Group yake binafsi.</p>
+    {% if group["whatsapp_group_url"] %}
+      <a href="{{ group["whatsapp_group_url"] }}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:13px;border-radius:10px;text-decoration:none;background:#0e7a34;color:#fff;font-weight:900">💬 Fungua WhatsApp ya Kikundi</a>
+    {% else %}
+      <div class="muted">WhatsApp Group link bado haijawekwa na msimamizi wa kikundi.</div>
+    {% endif %}
   </section>
 
 </main>

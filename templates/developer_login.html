@@ -1,15 +1,1 @@
-<!doctype html>
-<html lang="sw">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Developer Access | NJIAKIKOBA</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-</head><body>
-<main class="auth dev">
-<a href="javascript:history.back()" class="back-btn back-btn-standalone">← Rudi Nyuma</a>
-<form class="form-card dev-card" method="post"><h1>Developer Access</h1><p class="muted">Eneo hili halijaunganishwa na public navigation.</p>
-{% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
-<label>Developer Password</label><input name="developer_password" type="password" autocomplete="current-password" required>
-<br><br><button class="btn btn-gold" type="submit">Fungua Developer Room</button></form></main>
-</body></html>
+<!doctype html><html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Developer Access</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"><style>body{background:#07111f}.dev-login{max-width:430px;margin:12vh auto;padding:22px}.dev-card{background:#0b1728;border:1px solid #16253a;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.dev-card h1{color:#eaf0fa}.dev-card label{display:block;color:#cbd5e1;font-weight:800;margin:12px 0 6px}.dev-card input{width:100%;padding:12px;border:1px solid #31445f;border-radius:10px;background:#081423;color:#fff}.dev-card .show-password{white-space:nowrap}.dev-btn{width:100%;margin-top:16px;padding:13px;border:0;border-radius:10px;background:#e8b923;color:#1b1b1b;font-weight:900}</style></head><body><div style="padding:10px 5%"><a class="back-btn" href="javascript:history.back()" style="color:#cbd5e1">← Rudi Nyuma</a></div><div class="dev-login"><div class="dev-card"><h1>🔐 Mfumo wa Ufundi</h1><p style="color:#9fb0c4">Eneo la ndani la matengenezo ya mfumo.</p>{% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}<form method="post"><label>Neno la siri</label><div class="password-row"><input name="developer_password" type="password" autocomplete="current-password" required><button type="button" class="show-password" onclick="togglePassword(this)">👁 Onyesha</button></div><button class="dev-btn" type="submit">Ingia</button></form></div></div><script>function togglePassword(btn){const input=btn.parentElement.querySelector('input');const show=input.type==='password';input.type=show?'text':'password';btn.textContent=show?'🙈 Ficha':'👁 Onyesha';}</script></body></html>

@@ -6,7 +6,7 @@
 <title>{{ title }} | NJIAKIKOBA</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body><div style="padding:10px 5%"><a class="back-btn" href="javascript:history.back()">← Rudi Nyuma</a></div>
 <div class="error-page">
   <span class="error-icon">{{ '🔍' if code == 404 else '⚠️' }}</span>
   <h1>{{ title }}</h1>

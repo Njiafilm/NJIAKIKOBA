@@ -6,18 +6,19 @@
 .form-page{max-width:650px;margin:auto;padding:22px 12px}.card{background:#fff;border:1px solid #dce5df;border-radius:16px;padding:20px;box-shadow:0 8px 25px rgba(20,55,30,.08)}
 h1{color:#12321c}.hint{color:#617067;line-height:1.6}.field{margin:13px 0}.field label{display:block;font-weight:800;color:#20372a;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #bdc9c1;border-radius:9px;font-size:16px}.btn{width:100%;padding:13px;border:0;border-radius:10px;background:#0e7a34;color:#fff;font-size:16px;font-weight:900}
 </style></head><body>
-<nav class="nav"><a class="brand" href="/">🔐 NJIAKIKOBA</a><div class="navlinks"><a href="/login">Ingia</a></div></nav>
+<nav class="nav"><a class="brand" href="/">🔐 NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/login">Ingia</a></div><a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav>
 <main class="form-page"><section class="card">
 <h1>👑 Sajili Kiongozi wa Kikundi</h1>
 <p class="hint">Tumia Registration Code ya kikundi husika. Kila kikundi kinaweza kuwa na viongozi wasiozidi 3.</p>
 {% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
 <form method="post" action="/register-leaders">
-<div class="field"><label>Registration Code ya Kikundi</label><input name="group_code" placeholder="NK-000000000000001" required></div>
+<div class="field"><label>Registration Code ya Kikundi</label><input name="group_code" placeholder="NK-0001" required></div>
 <div class="field"><label>Nafasi ya Kiongozi</label><input name="leader_title" placeholder="Mwenyekiti" required></div>
 <div class="field"><label>Jina Kamili</label><input name="full_name" required></div>
 <div class="field"><label>Namba ya Simu</label><input name="phone" inputmode="tel" required></div>
 <div class="field"><label>Aina ya Kitambulisho</label><input name="id_type" placeholder="NIDA / Passport / ..." required></div>
 <div class="field"><label>Namba ya Kitambulisho</label><input name="id_number" required></div>
-<div class="field"><label>Nywila</label><input type="password" name="password" minlength="8" required></div>
+<div class="field"><label>Nywila</label><div class="password-row"><input type="password" name="password" autocomplete="new-password" minlength="8" required><button type="button" class="show-password" onclick="togglePassword(this)">👁 Onyesha</button></div></div>
 <button class="btn">Sajili Kiongozi</button>
-</form></section></main></body></html>
+</form></section></main><script>function togglePassword(btn){const input=btn.parentElement.querySelector('input');if(!input)return;const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁 Onyesha':'🙈 Ficha';}</script>
+</body></html>

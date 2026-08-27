@@ -28,6 +28,16 @@
   <a href="/developer-dashboard/groups" class="btn btn-gold">Fungua Usimamizi wa Vikundi</a>
 </div>
 
+<div class="card" style="margin-bottom:20px;background:#f4fbff">
+  <h3>⬆️ Upgrade ya Kikundi</h3>
+  <p class="muted">Developer anaweza kuongeza ukomo wa wanachama kwa kikundi husika. Kikomo cha juu kwenye paneli hii ni 9,999.</p>
+  <form method="post" action="/developer-dashboard/upgrade" class="dev-settings-form">
+    <div><label>Kikundi</label><select name="group_id" required>{% for g in groups %}<option value="{{g['id']}}">{{g['group_name']}} — {{g['member_count']}}/{{g['member_cap']}}</option>{% endfor %}</select></div>
+    <div><label>Ukomo mpya</label><input type="number" name="member_cap" min="1" max="9999" value="{{ settings['member_cap'] or 999 }}" required></div>
+    <button class="btn btn-gold" type="submit">⬆️ Upgrade / Hifadhi Ukomo</button>
+  </form>
+</div>
+
 <div class="card" style="margin-bottom:20px">
   <h3>💰 Mapato Yako (Operating Commission + Ada ya Amana ya Kwanza)</h3>
   <div class="dev-earnings">TZS {{ "{:,.2f}".format(stats.commission) }}</div>
@@ -58,6 +68,26 @@
   {% endif %}
   <form method="post" action="/developer-dashboard/end-cycle" onsubmit="return confirm('Hii itahesabu ada ya 2% ya jumla ya akiba zote na kuirekodi. Haitatuma pesa kiotomatiki. Endelea?');">
     <button type="submit" class="btn btn-gold">🔒 Funga Mzunguko wa Sasa (Hesabu Ada 2%)</button>
+  </form>
+</div>
+
+<div class="card dev-card" style="margin-bottom:20px;background:#fffdf2">
+  <h3>🛠️ Developer Command Center — Software & Hardware Repair</h3>
+  <p class="muted">Tumia command maalum kufanya diagnostics na safe repairs. Hakuna command inayotekeleza code arbitrary au kudhibiti hardware moja kwa moja; hardware commands hufanya browser/device checks.</p>
+  <form method="post" action="/developer-dashboard/command" class="dev-settings-form">
+    <div><label>Command</label><select name="command" required>
+      <option value="RUN_SYSTEM_HEALTH">RUN_SYSTEM_HEALTH — System health</option>
+      <option value="REPAIR_DATABASE">REPAIR_DATABASE — Database/migrations</option>
+      <option value="CHECK_PHONE_VALIDATION">CHECK_PHONE_VALIDATION — Tanzania phone validation</option>
+      <option value="REPAIR_CERTIFICATE_PAGE">REPAIR_CERTIFICATE_PAGE — Certificate/PDF page</option>
+      <option value="CHECK_PUBLIC_DEVELOPER_LEAKS">CHECK_PUBLIC_DEVELOPER_LEAKS — Public UI cleanup</option>
+      <option value="CHECK_GROUP_WHATSAPP">CHECK_GROUP_WHATSAPP — Group WhatsApp</option>
+      <option value="SOFTWARE_REPAIR">SOFTWARE_REPAIR — Safe software repair</option>
+      <option value="HARDWARE_DIAGNOSTIC">HARDWARE_DIAGNOSTIC — Browser/device diagnostics</option>
+      <option value="HARDWARE_REPAIR">HARDWARE_REPAIR — Safe hardware repair workflow</option>
+    </select></div>
+    <div><label>Error / maelezo ya ziada (hiari)</label><textarea name="issue_text" maxlength="3000" placeholder="Bandika error message hapa..."></textarea></div>
+    <button class="btn btn-gold" type="submit">▶ Endesha Command</button>
   </form>
 </div>
 
@@ -119,6 +149,10 @@
     <div>
       <label>Apple App Store — Link ya App</label>
       <input type="url" name="appstore_url" value="{{ settings['appstore_url'] or '' }}" placeholder="https://apps.apple.com/app/id...">
+    </div>
+    <div>
+      <label>WhatsApp Group ya Kikundi</label>
+      <input type="url" name="whatsapp_group_url" value="{{ settings['whatsapp_group_url'] or '' }}" placeholder="https://chat.whatsapp.com/...">
     </div>
     <div>
       <label>Ukomo wa Wanachama (Upgrade) — sasa: {{ settings['member_cap'] or 999 }}</label>
@@ -198,4 +232,4 @@
 
 <div class="card dev-card" style="margin-top:20px"><h3>Mawasiliano</h3><p>Email: gsdtech20@gmail.com</p><p>WhatsApp: 0755 248 789</p><p class="muted">Payment payout account haionyeshwi hapa wala kwenye public UI; itapaswa kuhifadhiwa kama secret ya deployment.</p></div>
 </main></div>
-</body></html>
+<script>function autoPasswordToggles(){document.querySelectorAll('input[type="password"]').forEach(function(input){if(input.dataset.toggleReady)return;input.dataset.toggleReady='1';const b=document.createElement('button');b.type='button';b.className='show-password';b.textContent='👁 Onyesha';b.onclick=function(){const show=input.type==='password';input.type=show?'text':'password';b.textContent=show?'🙈 Ficha':'👁 Onyesha';};input.parentNode.style.display='flex';input.parentNode.style.gap='8px';input.parentNode.appendChild(b);});}document.addEventListener('DOMContentLoaded',autoPasswordToggles);</script></body></html>
