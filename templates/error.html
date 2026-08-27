@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }} | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="error-page">
+  <span class="error-icon">{{ '🔍' if code == 404 else '⚠️' }}</span>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <a href="/" class="btn btn-green">🏠 Rudi Nyumbani</a>
+</div>
+</body>
+</html>

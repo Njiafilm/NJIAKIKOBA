@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developer Room | NJIAKIKOBA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head><body>
+<div class="dev"><nav class="nav"><span class="brand">🔐 NJIAKIKOBA DEVELOPER</span><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/logout">Toka</a></div></nav>
+<main class="dashboard"><div class="topline"><div><h1>Developer Room</h1><p class="muted">Technical monitoring only. Member financial details are not exposed here.</p></div>
+<form method="post" action="/run-bots"><button class="btn btn-gold">⚙️ Run System Checker & Security Bots</button></form></div>
+
+<div class="card" style="margin-bottom:20px">
+  <h3>🧭 Urambazaji wa Mfumo</h3>
+  <p class="muted">Fikia sehemu nyingine za mfumo kwa ukaguzi wa jumla. Taarifa za akaunti binafsi za wanachama (salio, malipo) hazionekani mahali popote hapa.</p>
+  <div class="dev-nav-links">
+    <a href="/developer-dashboard/chat" class="btn btn-gold">💬 Group Chat (Simamia)</a>
+    <a href="/" target="_blank" rel="noopener" class="btn btn-white">🏠 Home Page</a>
+    <a href="/register-leaders" target="_blank" rel="noopener" class="btn btn-white">👤 Usajili wa Viongozi</a>
+    <a href="/register" target="_blank" rel="noopener" class="btn btn-white">➕ Usajili wa Mwanachama</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+  <h3>💰 Mapato Yako (Operating Commission + Ada ya Amana ya Kwanza)</h3>
+  <div class="dev-earnings">TZS {{ "{:,.2f}".format(stats.commission) }}</div>
+  <p class="muted">Jumla ya mapato yote (2% ya kila muamala + 1% ya amana ya kwanza ya kila mwanachama). Siku 30 zilizopita: TZS {{ "{:,.2f}".format(stats.commission_30d) }}</p>
+</div>
+
+<div class="stats"><div class="stat">Transactions<strong>{{stats.transactions}}</strong></div><div class="stat">Pending<strong>{{stats.pending}}</strong></div><div class="stat">Operating Commission<strong>TZS {{ "{:,.2f}".format(stats.commission) }}</strong></div><div class="stat">Errors<strong>{{stats.errors}}</strong></div></div>
+<div class="table-wrap"><table class="table"><thead><tr><th>Level</th><th>Message</th><th>Tarehe</th></tr></thead><tbody>{% for l in logs %}<tr><td>{{l["level"]}}</td><td>{{l["message"]}}</td><td>{{l["created_at"]}}</td></tr>{% else %}<tr><td colspan="3">Hakuna system logs.</td></tr>{% endfor %}</tbody></table></div>
+
+<div class="card" style="margin-bottom:20px">
+  <h3>🏷️ Kikundi</h3>
+  <p class="muted">Namba ya Usajili: <strong>{{ settings["registration_code"] or "—" }}</strong> (haionekani kwenye tovuti ya umma) &middot; Viongozi: {{ counts.leaders }}/3 &middot; Wanachama Jumla: {{ counts.members }}/{{ settings["member_cap"] or 999 }}</p>
+</div>
+
+<div class="card" style="margin-bottom:20px">
+  <h3>📊 Muhtasari wa Fedha za Kikundi (Jumla — siyo ya mtu binafsi)</h3>
+  <div class="dev-summary-grid">
+    <div><span class="cert-label">Jumla ya Akiba za Wanachama Wote</span><br><strong>TZS {{ "{:,.2f}".format(group_summary.total_savings) }}</strong></div>
+    <div><span class="cert-label">Jumla ya Mikopo Inayodaiwa</span><br><strong>TZS {{ "{:,.2f}".format(group_summary.total_loans) }}</strong></div>
+  </div>
+</div>
+
+<div class="card dev-card" style="margin-bottom:20px">
+  <h3>🔄 Mzunguko wa Kikundi (Kuvunja Kikundi)</h3>
+  <p class="muted">Muda wa sasa wa mzunguko: <strong>miezi {{ settings["cycle_months"] or 12 }}</strong>{% if settings["cycle_started_at"] %} &middot; Ulioanza: {{ settings["cycle_started_at"] }}{% endif %}</p>
+  {% if last_cycle %}
+  <p class="muted">Mzunguko wa mwisho uliofungwa: TZS {{ "{:,.2f}".format(last_cycle["total_group_savings"]) }} jumla, ada 2% = TZS {{ "{:,.2f}".format(last_cycle["commission_amount"]) }} ({{ last_cycle["created_at"] }})</p>
+  {% endif %}
+  <form method="post" action="/developer-dashboard/end-cycle" onsubmit="return confirm('Hii itahesabu ada ya 2% ya jumla ya akiba zote na kuirekodi. Haitatuma pesa kiotomatiki. Endelea?');">
+    <button type="submit" class="btn btn-gold">🔒 Funga Mzunguko wa Sasa (Hesabu Ada 2%)</button>
+  </form>
+</div>
+
+<div class="card dev-card" style="margin-bottom:20px">
+  <h3>🔌 Muunganiko wa Mapato (AdSense / Store)</h3>
+  <p class="muted">Jaza tu ukiwa na akaunti halisi za Google AdSense, Google Play, au Apple App Store. Kiungo/script haitaonekana kwenye tovuti mpaka ujaze hapa.</p>
+  {% with messages_f=get_flashed_messages(with_categories=true) %}{% for c,m in messages_f %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+  <form method="post" action="/developer-dashboard/settings" class="dev-settings-form">
+    <div>
+      <label>Jina la Kikundi</label>
+      <input type="text" name="group_name" value="{{ settings['group_name'] or 'NJIAKIKOBA' }}" placeholder="NJIAKIKOBA">
+    </div>
+    <div>
+      <label>Google AdSense Publisher ID (mfano: ca-pub-1234567890123456)</label>
+      <input type="text" name="adsense_publisher_id" value="{{ settings['adsense_publisher_id'] or '' }}" placeholder="ca-pub-XXXXXXXXXXXXXXXX">
+    </div>
+    <div>
+      <label>Google Play Store — Link ya App</label>
+      <input type="url" name="play_store_url" value="{{ settings['play_store_url'] or '' }}" placeholder="https://play.google.com/store/apps/details?id=...">
+    </div>
+    <div>
+      <label>Apple App Store — Link ya App</label>
+      <input type="url" name="appstore_url" value="{{ settings['appstore_url'] or '' }}" placeholder="https://apps.apple.com/app/id...">
+    </div>
+    <div>
+      <label>Ukomo wa Wanachama (Upgrade) — sasa: {{ settings['member_cap'] or 999 }}</label>
+      <input type="number" name="member_cap" min="{{ counts.members }}" value="{{ settings['member_cap'] or 999 }}">
+    </div>
+    <div>
+      <label>Muda wa Mzunguko (miezi)</label>
+      <select name="cycle_months">
+        {% for m in [3,6,9,12] %}
+        <option value="{{ m }}" {{ 'selected' if (settings['cycle_months'] or 12)==m else '' }}>{{ m }} miezi</option>
+        {% endfor %}
+      </select>
+    </div>
+    <hr style="border:none;border-top:1px solid #eaf0eb;margin:6px 0">
+    <div>
+      <label>Namba ya Simu ya Kikundi (Lipa Namba/Mpesa) — hiari</label>
+      <input type="text" name="settlement_phone" value="{{ settings['settlement_phone'] or '' }}" placeholder="255XXXXXXXXX">
+    </div>
+    <div>
+      <label>Jina la Benki ya Kikundi — hiari</label>
+      <input type="text" name="settlement_bank_name" value="{{ settings['settlement_bank_name'] or '' }}" placeholder="CRDB, NMB, n.k.">
+    </div>
+    <div>
+      <label>Namba ya Akaunti ya Benki ya Kikundi — hiari</label>
+      <input type="text" name="settlement_bank_account" value="{{ settings['settlement_bank_account'] or '' }}" placeholder="0123456789">
+    </div>
+    <hr style="border:none;border-top:1px solid #eaf0eb;margin:6px 0">
+    <div>
+      <label>Jina la Mshirika wa Kifedha (Benki/Kampuni) — hiari</label>
+      <input type="text" name="partner_name" value="{{ settings['partner_name'] or '' }}" placeholder="Mfano: CRDB Bank PLC">
+    </div>
+    <div>
+      <label>Mawasiliano ya Mshirika — hiari</label>
+      <input type="text" name="partner_contact" value="{{ settings['partner_contact'] or '' }}" placeholder="Simu/Email ya afisa husika">
+    </div>
+    <div>
+      <label>Maelezo ya Akaunti ya Mshirika — hiari</label>
+      <input type="text" name="partner_account_details" value="{{ settings['partner_account_details'] or '' }}" placeholder="Namba ya akaunti/tawi">
+    </div>
+    <button class="btn btn-gold" type="submit" style="justify-self:start">Hifadhi Mipangilio</button>
+  </form>
+</div>
+
+<div class="card dev-card" style="margin-top:20px">
+  <h3>🌐 Vyanzo Vingine (Amazon, Jumia, n.k.)</h3>
+  <p class="muted">Ongeza kiungo chochote cha ziada ambacho unataka kionekane kwenye home page — hakuna kikomo cha idadi.</p>
+  <form method="post" action="/developer-dashboard/integrations/add" class="dev-settings-form dev-settings-row">
+    <div><label>Ikoni (emoji, hiari)</label><input type="text" name="icon" placeholder="🛒" maxlength="4"></div>
+    <div><label>Jina</label><input type="text" name="label" placeholder="Amazon" required></div>
+    <div><label>Link (https://...)</label><input type="url" name="url" placeholder="https://amazon.com/..." required></div>
+    <button class="btn btn-gold" type="submit">➕ Ongeza</button>
+  </form>
+  {% if integrations %}
+  <ul class="integration-list">
+    {% for i in integrations %}
+    <li>
+      <span>{{ i["icon"] }} <strong>{{ i["label"] }}</strong> — <a href="{{ i['url'] }}" target="_blank" rel="noopener">{{ i["url"] }}</a></span>
+      <form method="post" action="/developer-dashboard/integrations/delete/{{ i['id'] }}" onsubmit="return confirm('Futa chanzo hiki?');">
+        <button type="submit" class="chat-action-btn chat-action-danger">🗑 Futa</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Bado hakuna vyanzo vya ziada vilivyoongezwa.</p>
+  {% endif %}
+</div>
+
+<div class="card share-card" style="margin-top:20px">
+  <h3>📣 Sambaza Mfumo</h3>
+  <p class="muted">Waalike watumiaji au wenzako kutumia/kujaribu mfumo.</p>
+  <div class="share-row">
+    <a class="btn share-btn-wa" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Angalia NJIAKIKOBA: ' ~ url_for('home', _external=True)) | urlencode }}">💬 Share WhatsApp</a>
+  </div>
+  <input type="text" readonly value="{{ url_for('home', _external=True) }}" class="share-url-box">
+</div>
+
+<div class="card dev-card" style="margin-top:20px"><h3>Mawasiliano</h3><p>Email: gsdtech20@gmail.com</p><p>WhatsApp: 0755 248 789</p><p class="muted">Payment payout account haionyeshwi hapa wala kwenye public UI; itapaswa kuhifadhiwa kama secret ya deployment.</p></div>
+</main></div>
+</body></html>
