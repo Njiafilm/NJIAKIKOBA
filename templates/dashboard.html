@@ -5,24 +5,99 @@
 <title>Dashboard | NJIAKIKOBA</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-</head><body>
+</head><body class="dash2">
 <nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero.png"> NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/group-chat">💬 Mazungumzo</a><span>{{ user["full_name"] }}</span><a href="/logout">Toka</a></div><a class="dev-hidden-access" href="/developer-room" aria-label="Developer access" title="Developer">.</a></nav>
-<main class="dashboard"><div class="topline"><div><h1>Dashboard</h1><div style="margin:8px 0;color:#12321c;font-weight:800">🏘️ {{ group["group_name"] }} · 👥 Ukomo: {{ group["member_cap"] }}</div><p class="muted">Muhtasari wa akaunti yako &middot; Namba ya Mwanachama: <strong>{{ "%06d"|format(user["member_number"]) if user["member_number"] else "—" }}</strong> &middot; <a href="/certificate">📜 Ona Cheti Chako</a></p></div><button class="btn btn-gold" onclick="makePayment()">Lipa / Weka Akiba</button></div>
-<div class="card" style="margin-bottom:18px"><h3>Njia ya Kupokea Malipo</h3><p class="muted">Jaza namba ya simu au akaunti ya bank. Taarifa hizi ni za akaunti yako tu na hazionyeshwi kwa wanachama wengine.</p><div class="grid-2"><div><label>Njia</label><select id="payoutmethod" onchange="togglePayout()"><option value="mobile" {% if user['payout_method']!='bank' %}selected{% endif %}>Simu / Mobile Money</option><option value="bank" {% if user['payout_method']=='bank' %}selected{% endif %}>Bank</option></select></div><div id="mobilebox"><label>Namba ya simu</label><input id="payphone" value="{{ user['payment_phone'] or '' }}" inputmode="tel" placeholder="2557XXXXXXXX"><label>Mtandao</label><select id="paynetwork"><option value="MPESA" {% if user['payment_network']=='MPESA' %}selected{% endif %}>M-Pesa</option><option value="AIRTEL_MONEY" {% if user['payment_network']=='AIRTEL_MONEY' %}selected{% endif %}>Airtel Money</option><option value="MIXX_BY_YAS" {% if user['payment_network']=='MIXX_BY_YAS' %}selected{% endif %}>Mixx by Yas</option><option value="HALOPESA" {% if user['payment_network']=='HALOPESA' %}selected{% endif %}>HaloPesa</option><option value="EZYPESA" {% if user['payment_network']=='EZYPESA' %}selected{% endif %}>EzyPesa</option><option value="TTCLPESA" {% if user['payment_network']=='TTCLPESA' %}selected{% endif %}>TTCL Pesa</option></select></div><div id="bankbox" style="display:none"><label>Bank</label><select id="bankcode"><option value="CRDB">CRDB</option><option value="NMB">NMB</option><option value="NBC">NBC</option><option value="ABSA">ABSA</option></select><label>Namba ya akaunti</label><input id="bankaccount" value="{{ user['bank_account'] or '' }}" inputmode="numeric" placeholder="Namba ya akaunti"></div></div><button class="btn" onclick="savePayoutDestination()">Hifadhi & Thibitisha</button><span id="verifyresult" class="muted"></span></div>
-<div class="stats"><div class="stat">Akiba<strong>TZS {{ "{:,.0f}".format(user["savings"]) }}</strong></div><div class="stat">Deni la Mkopo<strong>TZS {{ "{:,.0f}".format(user["loan_balance"]) }}</strong></div><div class="stat">Usalama<strong>Imelindwa</strong></div><div class="stat">Miamala<strong>{{ transactions|length }}</strong></div></div>
-<div class="table-wrap"><table class="table"><thead><tr><th>Reference</th><th>Aina</th><th>Kiasi</th><th>Commission</th><th>Kikundi</th><th>Status</th><th>Tarehe</th><th>Risiti</th></tr></thead><tbody>
-{% for t in transactions %}<tr><td>{{t["tx_ref"]}}</td><td>{{t["tx_type"]}}</td><td>TZS {{ "{:,.0f}".format(t["amount"]) }}</td><td>TZS {{ "{:,.0f}".format(t["commission"]) }}</td><td>TZS {{ "{:,.0f}".format(t["group_amount"]) }}</td><td>{{t["status"]}}</td><td>{{t["created_at"]}}</td><td>{% if t["status"]=="paid" %}<a href="/receipt/{{t['tx_ref']}}">🧾 Ona</a>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="8">Hakuna miamala bado.</td></tr>{% endfor %}
-</tbody></table></div>
 
-<div class="card share-card">
-  <h3>📣 Waalike Wengine</h3>
-  <p class="muted">Sambaza NJIAKIKOBA kwa marafiki na familia yako.</p>
-  <div class="share-row">
-    <a class="btn share-btn-wa" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Jiunge nami kwenye NJIAKIKOBA — jukwaa la akiba na mikopo ya kikundi: ' ~ share_url) | urlencode }}">💬 Share WhatsApp</a>
-    <button class="btn share-btn-copy" onclick="copyShareLink()">🔗 Copy Link</button>
+<main class="dashboard dash2-wrap">
+
+  <!-- ===== Welcome / identity banner ===== -->
+  <section class="dash2-banner">
+    <div class="dash2-banner-left">
+      <div class="dash2-avatar">{{ (user["full_name"] or "M")[:1]|upper }}</div>
+      <div>
+        <p class="dash2-eyebrow">Karibu tena,</p>
+        <h1 class="dash2-name">{{ user["full_name"] }}</h1>
+        <div class="dash2-tags">
+          <span class="dash2-tag">🏘️ {{ group["group_name"] }}</span>
+          <span class="dash2-tag">👥 Ukomo wa Wanachama: {{ group["member_cap"] }}</span>
+          <span class="dash2-tag dash2-tag-gold">🪪 Na. {{ "%06d"|format(user["member_number"]) if user["member_number"] else "—" }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="dash2-banner-right">
+      <a href="/certificate" class="btn btn-outline">📜 Ona Cheti Chako</a>
+      <button class="btn btn-gold" onclick="makePayment()">💰 Lipa / Weka Akiba</button>
+    </div>
+  </section>
+
+  <!-- ===== Financial summary cards ===== -->
+  <section class="dash2-stats">
+    <div class="dash2-stat dash2-stat--savings">
+      <div class="dash2-stat-ico">👛</div>
+      <div><p class="dash2-stat-label">Akiba Yangu</p><strong class="dash2-stat-value">TZS {{ "{:,.0f}".format(user["savings"]) }}</strong></div>
+    </div>
+    <div class="dash2-stat dash2-stat--loan">
+      <div class="dash2-stat-ico">📄</div>
+      <div><p class="dash2-stat-label">Deni la Mkopo</p><strong class="dash2-stat-value">TZS {{ "{:,.0f}".format(user["loan_balance"]) }}</strong></div>
+    </div>
+    <div class="dash2-stat dash2-stat--secure">
+      <div class="dash2-stat-ico">🔐</div>
+      <div><p class="dash2-stat-label">Usalama wa Akaunti</p><strong class="dash2-stat-value">Imelindwa</strong></div>
+    </div>
+    <div class="dash2-stat dash2-stat--tx">
+      <div class="dash2-stat-ico">🧾</div>
+      <div><p class="dash2-stat-label">Jumla ya Miamala</p><strong class="dash2-stat-value">{{ transactions|length }}</strong></div>
+    </div>
+  </section>
+
+  <!-- ===== Quick actions ===== -->
+  <section class="dash2-quick">
+    <a href="/group-chat" class="dash2-quick-item"><span>💬</span>Mazungumzo ya Kikundi</a>
+    <a href="/certificate" class="dash2-quick-item"><span>📜</span>Cheti Changu</a>
+    <button class="dash2-quick-item" onclick="document.getElementById('payoutCard').scrollIntoView({behavior:'smooth'})"><span>🏦</span>Njia ya Malipo</button>
+    <button class="dash2-quick-item" onclick="document.getElementById('shareCard').scrollIntoView({behavior:'smooth'})"><span>📣</span>Waalike Wengine</button>
+  </section>
+
+  <!-- ===== Payout destination ===== -->
+  <div class="card dash2-card" id="payoutCard">
+    <div class="dash2-card-head"><h3>🏦 Njia ya Kupokea Malipo</h3><span class="dash2-badge-lock">🔒 Faragha</span></div>
+    <p class="muted">Jaza namba ya simu au akaunti ya benki. Taarifa hizi ni za akaunti yako tu na hazionyeshwi kwa wanachama wengine.</p>
+    <div class="grid-2">
+      <div><label>Njia</label><select id="payoutmethod" onchange="togglePayout()"><option value="mobile" {% if user['payout_method']!='bank' %}selected{% endif %}>Simu / Mobile Money</option><option value="bank" {% if user['payout_method']=='bank' %}selected{% endif %}>Bank</option></select></div>
+      <div id="mobilebox"><label>Namba ya simu</label><input id="payphone" value="{{ user['payment_phone'] or '' }}" inputmode="tel" placeholder="2557XXXXXXXX"><label>Mtandao</label><select id="paynetwork"><option value="MPESA" {% if user['payment_network']=='MPESA' %}selected{% endif %}>M-Pesa</option><option value="AIRTEL_MONEY" {% if user['payment_network']=='AIRTEL_MONEY' %}selected{% endif %}>Airtel Money</option><option value="MIXX_BY_YAS" {% if user['payment_network']=='MIXX_BY_YAS' %}selected{% endif %}>Mixx by Yas</option><option value="HALOPESA" {% if user['payment_network']=='HALOPESA' %}selected{% endif %}>HaloPesa</option><option value="EZYPESA" {% if user['payment_network']=='EZYPESA' %}selected{% endif %}>EzyPesa</option><option value="TTCLPESA" {% if user['payment_network']=='TTCLPESA' %}selected{% endif %}>TTCL Pesa</option></select></div>
+      <div id="bankbox" style="display:none"><label>Bank</label><select id="bankcode"><option value="CRDB">CRDB</option><option value="NMB">NMB</option><option value="NBC">NBC</option><option value="ABSA">ABSA</option></select><label>Namba ya akaunti</label><input id="bankaccount" value="{{ user['bank_account'] or '' }}" inputmode="numeric" placeholder="Namba ya akaunti"></div>
+    </div>
+    <div class="dash2-card-actions"><button class="btn btn-dark" onclick="savePayoutDestination()">Hifadhi &amp; Thibitisha</button><span id="verifyresult" class="muted"></span></div>
   </div>
-  <input id="shareUrlInput" type="text" readonly value="{{ share_url }}" class="share-url-box">
-</div>
+
+  <!-- ===== Transactions ===== -->
+  <div class="card dash2-card">
+    <div class="dash2-card-head"><h3>📊 Historia ya Miamala</h3></div>
+    <div class="table-wrap"><table class="table dash2-table"><thead><tr><th>Reference</th><th>Aina</th><th>Kiasi</th><th>Commission</th><th>Kikundi</th><th>Status</th><th>Tarehe</th><th>Risiti</th></tr></thead><tbody>
+    {% for t in transactions %}<tr>
+      <td class="dash2-mono">{{t["tx_ref"]}}</td>
+      <td>{{t["tx_type"]}}</td>
+      <td>TZS {{ "{:,.0f}".format(t["amount"]) }}</td>
+      <td>TZS {{ "{:,.0f}".format(t["commission"]) }}</td>
+      <td>TZS {{ "{:,.0f}".format(t["group_amount"]) }}</td>
+      <td><span class="dash2-status dash2-status--{{ t['status'] }}">{{t["status"]}}</span></td>
+      <td>{{t["created_at"]}}</td>
+      <td>{% if t["status"]=="paid" %}<a href="/receipt/{{t['tx_ref']}}" class="dash2-receipt-link">🧾 Ona</a>{% else %}—{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="8" class="dash2-empty">Hakuna miamala bado. Bofya "Lipa / Weka Akiba" kuanza.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+
+  <!-- ===== Share ===== -->
+  <div class="card share-card dash2-card" id="shareCard">
+    <h3>📣 Waalike Wengine</h3>
+    <p class="muted">Sambaza NJIAKIKOBA kwa marafiki na familia yako.</p>
+    <div class="share-row">
+      <a class="btn share-btn-wa" target="_blank" rel="noopener" href="https://wa.me/?text={{ ('Jiunge nami kwenye NJIAKIKOBA — jukwaa la akiba na mikopo ya kikundi: ' ~ share_url) | urlencode }}">💬 Share WhatsApp</a>
+      <button class="btn share-btn-copy" onclick="copyShareLink()">🔗 Copy Link</button>
+    </div>
+    <input id="shareUrlInput" type="text" readonly value="{{ share_url }}" class="share-url-box">
+  </div>
+
 </main>
 <div class="join-marquee">
   <div class="join-marquee-track">
