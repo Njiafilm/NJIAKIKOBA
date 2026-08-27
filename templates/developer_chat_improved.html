@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Group Chat | NJIAKIKOBA Developer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Developer Chat readability fixes -->
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      background: #f4f7f5 !important;
+      color: #17231c !important;
+    }
+
+    .dev {
+      min-height: 100vh;
+    }
+
+    .developer-chat-page {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 50px;
+    }
+
+    .chat-title-card {
+      background: #ffffff;
+      border: 1px solid #dce5df;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 25px rgba(20, 55, 30, .07);
+    }
+
+    .chat-title-card h1 {
+      margin: 0 0 7px;
+      color: #12321c !important;
+      font-size: clamp(24px, 5vw, 32px);
+      line-height: 1.2;
+    }
+
+    .chat-title-card p {
+      margin: 0;
+      color: #53635a !important;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .chat-panel {
+      background: #ffffff !important;
+      border: 1px solid #dce5df !important;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(20, 55, 30, .08);
+    }
+
+    .chat-panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 4px 2px 12px;
+      border-bottom: 1px solid #e7ece9;
+    }
+
+    .chat-panel-head h2 {
+      margin: 0;
+      color: #12321c !important;
+      font-size: 20px;
+    }
+
+    .chat-panel-head p {
+      margin: 5px 0 0;
+      color: #66756d !important;
+      font-size: 13px;
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .chat-message {
+      width: 100%;
+      background: #ffffff !important;
+      color: #18231d !important;
+      border: 1px solid #d9e2dc !important;
+      border-radius: 13px;
+      padding: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .chat-message.chat-leader {
+      border-left: 5px solid #e8b923 !important;
+      background: #fffdf4 !important;
+    }
+
+    .chat-message.chat-developer {
+      border-left: 5px solid #2f80c9 !important;
+      background: #f3f9fe !important;
+    }
+
+    .chat-message.chat-system {
+      border-left: 5px solid #8b9890 !important;
+      background: #f7f9f8 !important;
+    }
+
+    .chat-message.pinned {
+      box-shadow: 0 0 0 2px #e8b923 inset !important;
+    }
+
+    .message-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .message-author {
+      min-width: 0;
+      color: #14251a !important;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .message-time {
+      flex: 0 0 auto;
+      color: #68766e !important;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 5px;
+      padding: 3px 7px;
+      border-radius: 20px;
+      background: #e8b923;
+      color: #332800 !important;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+
+    .badge-dev {
+      background: #2f80c9;
+      color: #ffffff !important;
+    }
+
+    .badge-system {
+      background: #8b9890;
+      color: #ffffff !important;
+    }
+
+    .message-body {
+      margin: 0 0 11px;
+      color: #17231c !important;
+      font-size: 15px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .message-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      padding-top: 2px;
+    }
+
+    .message-actions form {
+      margin: 0;
+    }
+
+    .action-btn {
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid #ccd6d0 !important;
+      border-radius: 8px;
+      background: #ffffff !important;
+      color: #24342b !important;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      background: #f0f4f1 !important;
+    }
+
+    .delete-btn {
+      color: #b42318 !important;
+      border-color: #efc5c0 !important;
+    }
+
+    .chat-compose {
+      position: sticky;
+      bottom: 10px;
+      z-index: 5;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+      padding: 12px;
+      background: rgba(255,255,255,.96);
+      border: 1px solid #d9e2dc;
+      border-radius: 13px;
+      box-shadow: 0 8px 25px rgba(20,55,30,.12);
+      backdrop-filter: blur(8px);
+    }
+
+    .chat-compose textarea {
+      flex: 1;
+      min-width: 0;
+      min-height: 55px;
+      max-height: 150px;
+      resize: vertical;
+      padding: 12px 13px;
+      border: 1px solid #bdc9c1 !important;
+      border-radius: 10px;
+      outline: none;
+      background: #ffffff !important;
+      color: #17231c !important;
+      font-family: inherit;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .chat-compose textarea::placeholder {
+      color: #7a8780 !important;
+      opacity: 1;
+    }
+
+    .chat-compose textarea:focus {
+      border-color: #1f9d3c !important;
+      box-shadow: 0 0 0 3px rgba(31,157,60,.12);
+    }
+
+    .send-btn {
+      min-height: 55px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 10px;
+      background: #0e7a34 !important;
+      color: #ffffff !important;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .send-btn:hover {
+      background: #09652b !important;
+    }
+
+    .empty-chat {
+      padding: 35px 15px;
+      text-align: center;
+      color: #66756d !important;
+    }
+
+    .back-card {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .back-card a {
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .chat-alert {
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid #d9e2dc;
+      color: #24342b !important;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .developer-chat-page {
+        padding: 14px 10px 35px;
+      }
+
+      .chat-title-card,
+      .chat-panel {
+        border-radius: 13px;
+        padding: 13px;
+      }
+
+      .chat-panel-head {
+        display: block;
+      }
+
+      .message-head {
+        display: block;
+      }
+
+      .message-time {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .chat-compose {
+        display: block;
+        padding: 10px;
+      }
+
+      .chat-compose textarea {
+        width: 100%;
+        min-height: 80px;
+        margin-bottom: 8px;
+      }
+
+      .send-btn {
+        width: 100%;
+        min-height: 46px;
+      }
+
+      .action-btn {
+        min-height: 38px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="dev">
+    <nav class="nav">
+      <span class="brand">🔐 NJIAKIKOBA DEVELOPER</span>
+      <div class="navlinks">
+        <a href="/developer-room" class="back-btn">← Rudi</a>
+        <a href="/logout">Toka</a>
+      </div>
+    </nav>
+
+    <main class="developer-chat-page">
+
+      <section class="chat-title-card">
+        <h1>💬 Group Chat</h1>
+        <p>
+          Simamia mazungumzo ya kikundi. Ujumbe uliowekwa <strong>PIN</strong>
+          huonekana juu ya orodha.
+        </p>
+      </section>
+
+      {% with flash_messages=get_flashed_messages(with_categories=true) %}
+        {% for category, message in flash_messages %}
+          <div class="chat-alert">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <section class="chat-panel">
+        <div class="chat-panel-head">
+          <div>
+            <h2>💬 Mazungumzo ya Kikundi</h2>
+            <p>Ujumbe wa mwisho 200 unaonyeshwa.</p>
+          </div>
+        </div>
+
+        <div class="chat-list">
+          {% for msg in messages %}
+            <article class="chat-message
+              {% if msg['role'] == 'leader' %}chat-leader{% endif %}
+              {% if msg['role'] == 'developer' %}chat-developer{% endif %}
+              {% if msg['role'] == 'system' %}chat-system{% endif %}
+              {% if msg['pinned'] %} pinned{% endif %}">
+
+              <div class="message-head">
+                <div class="message-author">
+                  {{ msg['full_name'] }}
+
+                  {% if msg['role'] == 'leader' %}
+                    <span class="badge">KIONGOZI</span>
+                  {% elif msg['role'] == 'developer' %}
+                    <span class="badge badge-dev">DEVELOPER</span>
+                  {% elif msg['role'] == 'system' %}
+                    <span class="badge badge-system">MFUMO</span>
+                  {% endif %}
+
+                  {% if msg['pinned'] %}
+                    <span class="badge">📌 PIN</span>
+                  {% endif %}
+                </div>
+
+                <time class="message-time">{{ msg['created_at'] }}</time>
+              </div>
+
+              <div class="message-body">{{ msg['body'] }}</div>
+
+              <div class="message-actions">
+                <form method="post"
+                      action="{{ url_for('developer_chat_pin', message_id=msg['id']) }}">
+                  <button type="submit" class="action-btn">
+                    {% if msg['pinned'] %}📌 Ondoa Pin{% else %}📌 Pin{% endif %}
+                  </button>
+                </form>
+
+                <form method="post"
+                      action="{{ url_for('developer_chat_delete', message_id=msg['id']) }}"
+                      onsubmit="return confirm('Una uhakika unataka kufuta ujumbe huu?');">
+                  <button type="submit" class="action-btn delete-btn">
+                    🗑 Futa
+                  </button>
+                </form>
+              </div>
+            </article>
+          {% else %}
+            <div class="empty-chat">
+              <div style="font-size:38px;margin-bottom:8px">💬</div>
+              <strong>Hakuna ujumbe bado.</strong>
+              <div>Anza mazungumzo kwa kuandika ujumbe hapa chini.</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <form method="post"
+              action="{{ url_for('developer_chat') }}"
+              class="chat-compose">
+
+          <textarea
+            name="body"
+            maxlength="1000"
+            required
+            placeholder="Andika ujumbe wa msimamizi wa mfumo..."></textarea>
+
+          <button type="submit" class="send-btn">📤 Tuma Ujumbe</button>
+        </form>
+      </section>
+
+      <div class="back-card">
+        <a href="/developer-room" class="btn btn-white">← Rudi Developer Room</a>
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>
