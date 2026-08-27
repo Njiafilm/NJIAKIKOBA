@@ -337,3 +337,15 @@ body{overflow-x:hidden}
 .home-menu-panel a:hover{background:rgba(232,185,35,.12);color:var(--hg-gold)}
 .home-menu-panel a+ a{margin-top:2px}
 @media(max-width:600px){.home-menu-panel{right:-20px;min-width:190px}.home-nav-btn{padding:5px 9px;font-size:12px}}
+
+/* ===== Final public Home refinements ===== */
+.footer .footer-grid{grid-template-columns:1.4fr 1fr;max-width:900px;margin:0 auto}
+.footer-contact-link{display:block;margin:4px 0 8px;color:#b8c9bd;font-size:14px;line-height:1.7}
+.footer-contact-link:hover{color:var(--hg-gold)}
+.copyright-line{position:relative;display:flex;justify-content:center;align-items:center;gap:8px;margin-top:30px}
+.copyright-line .copyright{margin:0}
+.developer-dot{display:inline-flex;align-items:center;justify-content:center;width:12px;height:18px;color:#8fa596;font-size:18px;line-height:1;text-decoration:none;opacity:.75;cursor:pointer}
+.developer-dot:hover,.developer-dot:focus{color:var(--hg-gold);opacity:1;outline:none}
+@media(max-width:600px){.footer .footer-grid{grid-template-columns:1fr;max-width:none}.copyright-line{gap:5px}.developer-dot{width:10px}}
+/* Make the supplied Hero image explicit so it remains visible on mobile and production hosts. */
+.hero-bg{background-repeat:no-repeat;background-color:#07351f;background-position:center center;background-size:cover}
