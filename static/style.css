@@ -279,9 +279,9 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,
 
 
 /* ===== Hidden developer access: top navigation hotspot ===== */
-.dev-hidden-access{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:4px;color:transparent!important;background:transparent;border:0;text-decoration:none;opacity:.01;cursor:pointer;user-select:none}
-.dev-hidden-access:hover,.dev-hidden-access:focus{opacity:.03;outline:none}
-.topbar .dev-hidden-access{position:absolute;right:6px;top:6px}
+.dev-hidden-access-bottom{position:absolute;right:6px;bottom:6px;display:block;width:28px;height:28px;color:transparent!important;background:transparent;border:0;text-decoration:none;opacity:0;cursor:pointer;user-select:none;z-index:20}
+.dev-hidden-access-bottom:focus{outline:none}
+.home-footer{position:relative}
 
 /* ===== Homepage mobile contrast/layout repair ===== */
 body{overflow-x:hidden}
@@ -310,3 +310,9 @@ body{overflow-x:hidden}
   .hero p{font-size:16px !important;line-height:1.6 !important;max-width:100%}
   .hero-actions{max-width:100% !important}
 }
+
+/* NJIAKIKOBA HOME — restored original green public landing page */
+.home-backbar{height:28px;background:#071a12;padding:5px 5%;font-size:11px}.home-backbar .back-btn{color:#cbd5e1}.home-topbar{height:48px;background:#073d20;color:#fff;display:flex;align-items:center;padding:0 5%;position:relative;border-bottom:1px solid rgba(255,255,255,.08)}.home-topbar .brand{gap:7px;font-size:16px}.brand-icon{font-size:16px}.topbar-right{margin-left:auto;display:flex;gap:8px}.lang-switch{border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:3px 8px;font-size:10px;color:#f5c542}.dev-hidden-access{position:absolute;right:0;top:0;width:32px;height:48px;display:block;background:transparent;cursor:default;z-index:10}
+.home-hero{min-height:465px;background:linear-gradient(135deg,#063c20 0%,#064a26 45%,#052c19 100%);padding:48px 5%;color:#fff}.home-hero-inner{max-width:620px}.home-hero h1{font-size:39px;line-height:1.02;letter-spacing:-1.8px;margin:0 0 18px;font-weight:800}.home-hero h1 span{color:#f5c542}.home-hero p{font-size:15px;line-height:1.75;color:#d9e7df;max-width:590px;margin:0}.home-hero .hero-actions{display:flex;gap:12px;margin-top:28px}.home-hero .btn{min-height:40px;padding:10px 16px;border-radius:8px;font-size:12px}.home-join{background:transparent!important;color:#fff!important;box-shadow:none!important}.home-learn{background:#fff!important;color:#202b28!important;box-shadow:none!important}.home-section{padding:54px 5%;max-width:1200px;margin:auto}.home-section .section-title{margin-bottom:32px;text-align:center}.home-section .section-title h2{color:#238b4b;font-size:27px;letter-spacing:-1px;margin:0 0 7px}.home-section .section-title p{font-size:12px;color:#4b5563}.home-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:28px}.home-cards article{padding:0;background:transparent;border:0;box-shadow:none}.home-cards h3{font-size:13px;margin:0 0 10px;color:#263238}.home-cards p{font-size:11px;line-height:1.65;color:#4b5563;margin:0}.home-footer{background:#07172c;color:#dfe7f3;padding:38px 5% 55px;margin-top:10px;font-size:11px}.home-footer h3{font-size:13px;color:#fff}.home-footer a{display:inline;color:#dfe7f3}.home-footer .footer-grid{display:grid;grid-template-columns:2fr 1fr;gap:30px}.home-footer>p{margin-top:25px;color:#aeb9c9}
+@media(max-width:700px){.home-hero{min-height:465px;padding:48px 5%}.home-hero h1{font-size:39px}.home-cards{grid-template-columns:repeat(4,1fr);gap:18px}.home-cards h3{font-size:11px}.home-cards p{font-size:10px}.home-section{padding:50px 5%}.home-section .section-title h2{font-size:26px}.home-footer .footer-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.home-cards{grid-template-columns:repeat(2,1fr);row-gap:30px}.home-footer .footer-grid{grid-template-columns:1fr}.home-hero .hero-actions{flex-direction:column;max-width:300px}.home-hero .btn{width:100%}}
