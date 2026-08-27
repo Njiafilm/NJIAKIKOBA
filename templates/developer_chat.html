@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Developer Group Chat | NJIAKIKOBA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="dev">
+    <nav class="nav">
+      <span class="brand">🔐 NJIAKIKOBA DEVELOPER</span>
+      <div class="navlinks">
+        <a href="/developer-room" class="back-btn">← Developer Room</a>
+        <a href="/logout">Toka</a>
+      </div>
+    </nav>
+
+    <main class="dashboard">
+      <div class="topline">
+        <div>
+          <h1>💬 Group Chat</h1>
+          <p class="muted">
+            Simamia mazungumzo ya kikundi. Unaweza kutuma ujumbe, ku-pin au kufuta ujumbe.
+          </p>
+        </div>
+      </div>
+
+      {% with messages=get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <div class="card" style="margin-top:20px">
+        <div class="chat-head">
+          <h1>💬 Mazungumzo ya Kikundi</h1>
+          <p class="muted">Ujumbe 200 wa mwisho unaonyeshwa. Ujumbe uliowekwa pin huonekana juu.</p>
+        </div>
+
+        <div class="chat-list">
+          {% for msg in messages %}
+            <div class="chat-msg
+                        {% if msg['role'] == 'leader' %}chat-msg-leader{% endif %}
+                        {% if msg['role'] == 'developer' %}chat-msg-dev{% endif %}
+                        {% if msg['pinned'] %} chat-msg-pinned{% endif %}">
+
+              <div class="chat-msg-head">
+                <div>
+                  <span class="chat-name">{{ msg['full_name'] }}</span>
+
+                  {% if msg['role'] == 'leader' %}
+                    <span class="chat-badge">KIONGOZI</span>
+                  {% elif msg['role'] == 'developer' %}
+                    <span class="chat-badge chat-badge-dev">DEVELOPER</span>
+                  {% elif msg['role'] == 'system' %}
+                    <span class="chat-badge chat-badge-system">MFUMO</span>
+                  {% endif %}
+
+                  {% if msg['pinned'] %}
+                    <span class="chat-badge">📌 PINNED</span>
+                  {% endif %}
+                </div>
+
+                <span class="chat-time">{{ msg['created_at'] }}</span>
+              </div>
+
+              <div class="chat-body">{{ msg['body'] }}</div>
+
+              <div class="chat-actions">
+                <form method="post"
+                      action="{{ url_for('developer_chat_pin', message_id=msg['id']) }}"
+                      class="chat-inline-form">
+                  <button type="submit" class="chat-action-btn">
+                    {% if msg['pinned'] %}📌 Ondoa Pin{% else %}📌 Pin{% endif %}
+                  </button>
+                </form>
+
+                <form method="post"
+                      action="{{ url_for('developer_chat_delete', message_id=msg['id']) }}"
+                      class="chat-inline-form"
+                      onsubmit="return confirm('Una uhakika unataka kufuta ujumbe huu?');">
+                  <button type="submit" class="chat-action-btn chat-action-danger">
+                    🗑 Futa
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% else %}
+            <div class="card">
+              <p class="muted">Bado hakuna ujumbe kwenye group chat.</p>
+            </div>
+          {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('developer_chat') }}" class="chat-form">
+          <textarea
+            name="body"
+            maxlength="1000"
+            placeholder="Andika ujumbe wa msimamizi wa mfumo..."
+            required></textarea>
+          <button type="submit" class="btn btn-gold">📤 Tuma</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>ℹ️ Kumbuka</h3>
+        <p class="muted">
+          Ujumbe wa Developer huonekana kwenye Group Chat kama ujumbe wa
+          <strong>DEVELOPER</strong>. Usitumie sehemu hii kuweka siri za mfumo,
+          passwords au API keys.
+        </p>
+        <a href="/developer-room" class="btn btn-white">← Rudi Developer Room</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
