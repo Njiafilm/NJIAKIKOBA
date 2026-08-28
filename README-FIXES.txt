@@ -17,3 +17,5 @@ Deployment:
 - Set SECRET_KEY and DEVELOPER_PASSWORD_HASH in production.
 - Set DATABASE_PATH to a persistent database path if using SQLite, or adapt db() for PostgreSQL.
 - Set payment/Jitsi environment variables as required.
+
+- Homepage mobile hero layout/contrast repair: hero image remains the first full-width visual, hero text/login content stays below it with readable dark/gold styling, and horizontal overflow is prevented.
