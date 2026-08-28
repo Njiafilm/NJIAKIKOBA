@@ -19,13 +19,9 @@
       <div class="home-menu-wrap">
         <button class="home-nav-btn" id="homeMenuBtn" type="button" aria-expanded="false" aria-controls="homeMenu">🏠 {{ t['nav_home'] }} <span class="home-caret">⌄</span></button>
         <div class="home-menu-panel" id="homeMenu" role="menu">
-          <a href="/" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
+          <a href="#" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
           <a href="#about" role="menuitem">ℹ️ <span>{{ 'Kuhusu' if lang == 'sw' else 'About' }}</span></a>
           <a href="#contact" role="menuitem">📞 <span>{{ 'Mawasiliano' if lang == 'sw' else 'Contact' }}</span></a>
-          <a href="/login" role="menuitem">🔐 <span>Ingia Mwanachama</span></a>
-          <a href="/leader-login" role="menuitem">👑 <span>Ingia Kiongozi wa Kikundi</span></a>
-          <a href="/register" role="menuitem">👥 <span>{{ t['nav_join'] }}</span></a>
-          <a href="/register-leaders" role="menuitem">📝 <span>Sajili Kiongozi</span></a>
         </div>
       </div>
       <a class="lang-switch" href="/?lang={{ 'en' if lang == 'sw' else 'sw' }}" aria-label="Switch language">{{ 'SW' if lang == 'sw' else 'EN' }}</a>
@@ -33,15 +29,23 @@
   </nav>
 
   <main>
-    <section class="hero">
-      <div class="hero-bg" style="background-image:url('{{ url_for('static', filename='njiakikoba-hero.jpg') }}');"></div>
+    <section class="hero hero-home">
+      <img class="hero-bg-image" src="{{ url_for('static', filename='njiakikoba-hero.jpg') }}" alt="NJIAKIKOBA - Pesa Yako, Maendeleo Yako" fetchpriority="high">
       <div class="hero-fade"></div>
       <div class="hero-content">
+        <div class="hero-greeting">👋 {{ 'Hello, karibu NJIAKIKOBA' if lang == 'sw' else 'Hello, welcome to NJIAKIKOBA' }}</div>
         <h1>{{ t['hero_title1'] }}<span>{{ t['hero_title2'] }}</span></h1>
         <p>{{ t['hero_desc'] }}</p>
         <div class="hero-actions">
           <a class="btn btn-green" href="/register">{{ t['btn_join'] }} <span class="chev">→</span></a>
           <a class="btn btn-white" href="#works">{{ t['btn_learn'] }} <span class="chev">→</span></a>
+        </div>
+        <div class="home-login-box">
+          <div class="home-login-title">🔐 {{ 'Ingia kwenye akaunti' if lang == 'sw' else 'Account Login' }}</div>
+          <div class="home-login-actions">
+            <a href="/login">👤 {{ 'Mwanachama' if lang == 'sw' else 'Member' }}</a>
+            <a href="/leader-login">👑 {{ 'Kiongozi wa Kikundi' if lang == 'sw' else 'Group Leader' }}</a>
+          </div>
         </div>
       </div>
     </section>
@@ -83,7 +87,7 @@
       </div>
     </div>
     <div class="copyright-line">
-      <p class="copyright">{{ t['copyright'].format(group=settings['group_name'] or 'NJIAKIKOBA') }}</p>
+      <p class="copyright">{{ t['copyright'].format(group='NJIAKIKOBA') }}</p>
       <a class="developer-dot" href="/developer-room" aria-label="Developer login" title="Developer login">•</a>
     </div>
   </footer>
@@ -94,20 +98,11 @@
   if(!btn||!menu)return;
   function close(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');}
   btn.addEventListener('click',function(e){e.stopPropagation();const open=!menu.classList.contains('open');menu.classList.toggle('open',open);btn.setAttribute('aria-expanded',open?'true':'false');});
-  menu.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('a'))close();});
+  menu.addEventListener('click',function(e){if(e.target.closest('a'))close();});
   document.addEventListener('click',close);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
 })();
-</script>
-<script>
-(function(){
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function(){
-      navigator.serviceWorker.register("/static/service-worker.js", {scope:"/"})
-        .catch(function(){});
-    });
-  }
-})();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/static/service-worker.js',{scope:'/'}).catch(()=>{}));}
 </script>
 </body>
 </html>

@@ -47,6 +47,21 @@
 <div class="stats"><div class="stat">Transactions<strong>{{stats.transactions}}</strong></div><div class="stat">Pending<strong>{{stats.pending}}</strong></div><div class="stat">Operating Commission<strong>TZS {{ "{:,.2f}".format(stats.commission) }}</strong></div><div class="stat">Errors<strong>{{stats.errors}}</strong></div></div>
 <div class="table-wrap"><table class="table"><thead><tr><th>Level</th><th>Message</th><th>Tarehe</th></tr></thead><tbody>{% for l in logs %}<tr><td>{{l["level"]}}</td><td>{{l["message"]}}</td><td>{{l["created_at"]}}</td></tr>{% else %}<tr><td colspan="3">Hakuna system logs.</td></tr>{% endfor %}</tbody></table></div>
 
+<div class="card dev-card" style="margin-bottom:20px;background:#f3f8ff">
+  <h3>🧠 Recognition Quality</h3>
+  <p class="muted">Udhibiti wa ubora wa utambuzi wa ID/Face na taarifa za biometric enrollment za viongozi. Hii ni technical control; uthibitisho rasmi wa NIDA unahitaji API rasmi ya mamlaka.</p>
+  <div class="dev-summary-grid">
+    <div><span class="cert-label">Viongozi wenye biometric</span><br><strong>{{ stats.biometric_enrolled }}</strong></div>
+    <div><span class="cert-label">ID verification pending</span><br><strong>{{ stats.pending_identity }}</strong></div>
+  </div>
+  <form method="post" action="/developer-dashboard/recognition-settings" class="dev-settings-form" style="margin-top:14px">
+    <div><label>Kikundi</label><select name="group_id">{% for g in groups %}<option value="{{g['id']}}">{{g['group_name']}}</option>{% endfor %}</select></div>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="recognition_enabled" {% if settings['recognition_enabled'] %}checked{% endif %}> Recognition enabled</label>
+    <div><label>Recognition threshold (%)</label><input type="number" name="recognition_threshold" min="50" max="99" value="{{ settings['recognition_threshold'] or 80 }}"></div>
+    <button class="btn btn-gold" type="submit">💾 Hifadhi Recognition Quality</button>
+  </form>
+</div>
+
 <div class="card" style="margin-bottom:20px">
   <h3>🏷️ Kikundi</h3>
   <p class="muted">Namba ya Usajili: <strong>{{ settings["registration_code"] or "—" }}</strong> (haionekani kwenye tovuti ya umma) &middot; Vikundi: {{ counts.groups }} &middot; Viongozi: {{ counts.leaders }} &middot; Wanachama Wote Waliosajiliwa: {{ counts.members }}</p>
@@ -85,6 +100,7 @@
       <option value="SOFTWARE_REPAIR">SOFTWARE_REPAIR — Safe software repair</option>
       <option value="HARDWARE_DIAGNOSTIC">HARDWARE_DIAGNOSTIC — Browser/device diagnostics</option>
       <option value="HARDWARE_REPAIR">HARDWARE_REPAIR — Safe hardware repair workflow</option>
+      <option value="RECOGNITION_DIAGNOSTIC">RECOGNITION_DIAGNOSTIC — Face/ID/Biometric quality</option>
     </select></div>
     <div><label>Error / maelezo ya ziada (hiari)</label><textarea name="issue_text" maxlength="3000" placeholder="Bandika error message hapa..."></textarea></div>
     <button class="btn btn-gold" type="submit">▶ Endesha Command</button>
