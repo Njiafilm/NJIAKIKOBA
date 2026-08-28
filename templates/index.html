@@ -19,8 +19,7 @@
       <div class="home-menu-wrap">
         <a class="home-nav-btn" href="/" aria-label="{{ 'Mwanzo' if lang == 'sw' else 'Home' }}" title="{{ 'Mwanzo' if lang == 'sw' else 'Home' }}">
           <img class="home-click-icon" src="{{ url_for('static', filename='icons/home-click.png') }}" alt="">
-          <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span>
-        </a>
+          </a>
         <button class="home-menu-toggle" id="homeMenuBtn" type="button" aria-expanded="false" aria-controls="homeMenu" aria-label="{{ 'Fungua menyu ya nyumbani' if lang == 'sw' else 'Open home menu' }}"><span class="home-caret">⌄</span></button>
         <div class="home-menu-panel" id="homeMenu" role="menu">
           <a href="#" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
