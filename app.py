@@ -77,6 +77,44 @@ CHAT_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stat
 CHAT_MAX_UPLOAD_MB = int(os.environ.get("CHAT_MAX_UPLOAD_MB", "25"))
 app.config["MAX_CONTENT_LENGTH"] = CHAT_MAX_UPLOAD_MB * 1024 * 1024
 os.makedirs(CHAT_UPLOAD_DIR, exist_ok=True)
+VERIFICATION_UPLOAD_DIR = os.environ.get(
+    "VERIFICATION_UPLOAD_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "verification_uploads")
+)
+os.makedirs(VERIFICATION_UPLOAD_DIR, exist_ok=True)
+
+def save_data_image(data_url, prefix):
+    """Save a browser-captured JPEG data URL outside /static so it is not public."""
+    if not data_url or not data_url.startswith("data:image/"):
+        raise ValueError("Picha ya uthibitisho haipo au si sahihi.")
+    try:
+        header, encoded = data_url.split(",", 1)
+        raw = __import__("base64").b64decode(encoded, validate=True)
+    except Exception as exc:
+        raise ValueError("Picha ya uthibitisho imeharibika.") from exc
+    if len(raw) < 8 * 1024 or len(raw) > 5 * 1024 * 1024:
+        raise ValueError("Picha ya uthibitisho lazima iwe kati ya 8KB na 5MB.")
+    filename = f"{prefix}_{secrets.token_hex(16)}.jpg"
+    with open(os.path.join(VERIFICATION_UPLOAD_DIR, filename), "wb") as fh:
+        fh.write(raw)
+    return filename
+
+def normalize_id_type(value):
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+def validate_leader_id(id_type, id_number):
+    """Local format validation only; authoritative NIDA/passport verification needs an official API."""
+    typ = normalize_id_type(id_type)
+    value = re.sub(r"[^A-Za-z0-9]", "", str(id_number or "")).upper()
+    if typ in ("nida", "nid"):
+        return bool(re.fullmatch(r"\d{20}", value))
+    if "passport" in typ:
+        return bool(re.fullmatch(r"[A-Z0-9]{6,12}", value))
+    if "driving" in typ or "license" in typ or "leseni" in typ:
+        return bool(re.fullmatch(r"[A-Z0-9]{6,15}", value))
+    if "voter" in typ or "kura" in typ:
+        return bool(re.fullmatch(r"[A-Z0-9]{8,20}", value))
+    return bool(re.fullmatch(r"[A-Z0-9]{6,20}", value))
 
 ALLOWED_CHAT_MIMES = {
     "image/jpeg", "image/png", "image/webp", "image/gif",
@@ -168,7 +206,15 @@ def init_db():
         savings REAL DEFAULT 0,
         loan_balance REAL DEFAULT 0,
         status TEXT DEFAULT 'active',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        id_verification_status TEXT DEFAULT 'pending',
+        id_verification_method TEXT,
+        id_document_filename TEXT,
+        face_image_filename TEXT,
+        biometric_enrolled INTEGER DEFAULT 0,
+        biometric_credential_id TEXT,
+        recognition_confidence REAL DEFAULT 0,
+        recognition_quality INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS group_info (
@@ -176,7 +222,9 @@ def init_db():
         group_name TEXT DEFAULT 'NJIAKIKOBA',
         payment_number TEXT,
         system_commission REAL DEFAULT 0,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        recognition_enabled INTEGER DEFAULT 1,
+        recognition_threshold INTEGER DEFAULT 80
     );
 
     CREATE TABLE IF NOT EXISTS transactions (
@@ -311,6 +359,16 @@ def init_db():
         "ALTER TABLE users ADD COLUMN group_size_at_join INTEGER",
         "ALTER TABLE transactions ADD COLUMN first_deposit_fee REAL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN group_id INTEGER",
+        "ALTER TABLE users ADD COLUMN id_verification_status TEXT DEFAULT 'pending'",
+        "ALTER TABLE users ADD COLUMN id_verification_method TEXT",
+        "ALTER TABLE users ADD COLUMN id_document_filename TEXT",
+        "ALTER TABLE users ADD COLUMN face_image_filename TEXT",
+        "ALTER TABLE users ADD COLUMN biometric_enrolled INTEGER DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN biometric_credential_id TEXT",
+        "ALTER TABLE users ADD COLUMN recognition_confidence REAL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN recognition_quality INTEGER DEFAULT 0",
+        "ALTER TABLE group_info ADD COLUMN recognition_enabled INTEGER DEFAULT 1",
+        "ALTER TABLE group_info ADD COLUMN recognition_threshold INTEGER DEFAULT 80",
         "ALTER TABLE messages ADD COLUMN group_id INTEGER",
         "ALTER TABLE transactions ADD COLUMN group_id INTEGER",
         "ALTER TABLE cycle_settlements ADD COLUMN group_id INTEGER",
@@ -467,9 +525,10 @@ def register():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         code = request.form.get("group_code", "").strip()
+        group_name_input = request.form.get("group_name", "").strip()
 
-        if not name or not phone or len(password) < 8 or not code:
-            flash("Jaza jina, simu, nywila na Registration Code ya kikundi.", "danger")
+        if not name or not phone or len(password) < 8 or not code or not group_name_input:
+            flash("Jaza Jina la Kikundi, jina, simu, nywila na Registration Code.", "danger")
             return render_template("register.html")
 
         conn = db()
@@ -477,6 +536,10 @@ def register():
         if not group:
             conn.close()
             flash("Registration Code ya kikundi haijatambuliwa.", "danger")
+            return render_template("register.html")
+        if group_name_input.casefold() != (group["group_name"] or "").strip().casefold():
+            conn.close()
+            flash("Jina la Kikundi halilingani na Registration Code uliyoingiza.", "danger")
             return render_template("register.html")
 
         member_cap = max(1, int(group["member_cap"] or 999))
@@ -591,9 +654,16 @@ def register_leaders():
         id_number = request.form.get("id_number", "").strip()
         password = request.form.get("password", "")
         code = request.form.get("group_code", "").strip()
+        group_name_input = request.form.get("group_name", "").strip()
+        face_image = request.form.get("face_image", "")
+        biometric_credential = request.form.get("biometric_credential", "").strip()
 
-        if not all([name, phone, id_type, id_number, code]) or len(password) < 8:
-            flash("Jaza taarifa zote pamoja na Registration Code ya kikundi.", "danger")
+        if not all([name, phone, id_type, id_number, code, group_name_input, face_image, biometric_credential]) or len(password) < 8:
+            flash("Kiongozi lazima ajaze Jina la Kikundi, ID, Face ID na fingerprint/biometric.", "danger")
+            return render_template("register_leaders.html")
+        if not validate_leader_id(id_type, id_number):
+            flash("Kitambulisho hakijaonekana kuwa na format sahihi. Usajili umekataliwa.", "danger")
+            return render_template("register_leaders.html")
             return render_template("register_leaders.html")
 
         conn = db()
@@ -601,6 +671,16 @@ def register_leaders():
         if not group:
             conn.close()
             flash("Registration Code ya kikundi haijatambuliwa.", "danger")
+            return render_template("register_leaders.html")
+        if group_name_input.casefold() != (group["group_name"] or "").strip().casefold():
+            conn.close()
+            flash("Jina la Kikundi halilingani na Registration Code uliyoingiza.", "danger")
+            return render_template("register_leaders.html")
+        try:
+            face_filename = save_data_image(face_image, "face")
+        except ValueError as exc:
+            conn.close()
+            flash(str(exc), "danger")
             return render_template("register_leaders.html")
 
         leader_count = conn.execute(
@@ -624,11 +704,13 @@ def register_leaders():
             conn.execute(
                 """INSERT INTO users
                    (full_name, phone, password, role, id_type, id_number_hash,
-                    member_number, group_size_at_join, group_id)
-                   VALUES (?, ?, ?, 'leader', ?, ?, ?, ?, ?)""",
+                    member_number, group_size_at_join, group_id, id_verification_status,
+                    id_verification_method, face_image_filename, biometric_enrolled,
+                    biometric_credential_id, recognition_confidence, recognition_quality)
+                   VALUES (?, ?, ?, 'leader', ?, ?, ?, ?, ?, 'pending', 'format+face+webauthn', ?, 1, ?, 0, ?)""",
                 (f"{title}: {name}", phone, generate_password_hash(password),
                  id_type, generate_password_hash(id_number),
-                 next_number, new_total, group["id"])
+                 next_number, new_total, group["id"], face_filename, biometric_credential, 0, 0)
             )
             conn.execute(
                 """INSERT INTO messages
@@ -687,6 +769,8 @@ def developer_dashboard():
         "registered_users": conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
         "active_users": conn.execute("SELECT COUNT(*) FROM users WHERE status='active'").fetchone()[0],
         "payment_providers": conn.execute("SELECT COUNT(*) FROM payment_providers").fetchone()[0],
+        "pending_identity": conn.execute("SELECT COUNT(*) FROM users WHERE role='leader' AND id_verification_status='pending'").fetchone()[0],
+        "biometric_enrolled": conn.execute("SELECT COUNT(*) FROM users WHERE role='leader' AND biometric_enrolled=1").fetchone()[0],
     }
     logs = conn.execute(
         "SELECT level, message, created_at FROM system_logs ORDER BY id DESC LIMIT 15"
@@ -695,7 +779,8 @@ def developer_dashboard():
         """SELECT adsense_publisher_id, play_store_url, appstore_url, group_name,
                   registration_code, member_cap, settlement_phone, settlement_bank_name,
                   settlement_bank_account, partner_name, partner_contact,
-                  partner_account_details, cycle_months, cycle_started_at, whatsapp_group_url
+                  partner_account_details, cycle_months, cycle_started_at, whatsapp_group_url,
+                  recognition_enabled, recognition_threshold
            FROM group_info ORDER BY id LIMIT 1"""
     ).fetchone()
     counts = {
@@ -913,6 +998,21 @@ def end_cycle():
     )
     return redirect(url_for("developer_dashboard"))
 
+
+@app.route("/developer-dashboard/recognition-settings", methods=["POST"])
+@developer_required
+def developer_recognition_settings():
+    enabled = 1 if request.form.get("recognition_enabled") == "on" else 0
+    try:
+        threshold = max(50, min(99, int(request.form.get("recognition_threshold", "80"))))
+    except ValueError:
+        threshold = 80
+    conn = db()
+    group_id = request.form.get("group_id", type=int) or conn.execute("SELECT id FROM group_info ORDER BY id LIMIT 1").fetchone()[0]
+    conn.execute("UPDATE group_info SET recognition_enabled=?, recognition_threshold=? WHERE id=?", (enabled, threshold, group_id))
+    conn.commit(); conn.close()
+    flash("Recognition Quality settings zimehifadhiwa.", "success")
+    return redirect(url_for("developer_dashboard"))
 
 @app.route("/developer-dashboard/settings", methods=["POST"])
 @developer_required
@@ -1235,6 +1335,37 @@ def blmpay_webhook():
         conn.execute("UPDATE transactions SET status='failed' WHERE tx_ref=? AND status!='paid'",(tx_ref,))
     conn.commit(); conn.close(); return "OK",200
 
+@app.route("/group-chat/voice", methods=["POST"])
+@member_required
+def group_chat_voice():
+    """Receive a voice note recorded during a conference and publish it to the actor's group chat."""
+    conn = db()
+    actor = conn.execute(
+        "SELECT id, full_name, role, group_id FROM users WHERE id=? AND status='active'",
+        (session["user_id"],)
+    ).fetchone()
+    upload = request.files.get("voice")
+    try:
+        if not actor or not upload or not upload.filename:
+            return jsonify({"ok": False, "message": "Ujumbe wa sauti haupo."}), 400
+        media = save_chat_media(upload)
+        if media["kind"] != "audio":
+            return jsonify({"ok": False, "message": "Faili si sauti."}), 400
+        conn.execute(
+            """INSERT INTO messages
+               (user_id, full_name, role, body, media_kind, media_url, media_name, media_mime, group_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (actor["id"], actor["full_name"], actor["role"],
+             "🎙️ Ujumbe wa sauti kutoka kwenye mkutano wa LIVE.", media["kind"],
+             url_for("chat_media", filename=media["filename"]), media["original"], media["mime"], actor["group_id"])
+        )
+        conn.commit()
+        return jsonify({"ok": True, "message": "Ujumbe wa sauti umetumwa kwa kikundi."})
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    finally:
+        conn.close()
+
 @app.route("/group-chat", methods=["GET", "POST"])
 @member_required
 def group_chat():
@@ -1554,6 +1685,7 @@ def developer_command():
         "CHECK_GROUP_WHATSAPP": "Kagua WhatsApp Group link ya kila kikundi na kuhakikisha inatumika kwa group husika.",
         "HARDWARE_DIAGNOSTIC": "Hardware diagnostic ya browser/device: camera, microphone, storage na connectivity. Hakuna command inayoweza kuendesha code ya kifaa moja kwa moja.",
         "HARDWARE_REPAIR": "Hardware repair workflow: kagua permissions, camera/microphone, storage, browser cache na connectivity; hatua za kifaa zinafanywa na mtumiaji/technician, si server.",
+        "RECOGNITION_DIAGNOSTIC": "Kagua ubora wa Face ID, ID capture na biometric enrollment; toa confidence/quality diagnostics bila kuhifadhi biometrics mpya.",
         "SOFTWARE_REPAIR": "Safe software repair: migrations, template checks, validation checks na system logs; hakuna arbitrary exec().",
     }
     if command not in commands:
