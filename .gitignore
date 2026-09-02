@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+njiakikoba.db
+static/chat_uploads/*
+!static/chat_uploads/.gitkeep
+verification_uploads/
+*.log
+.DS_Store

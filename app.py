@@ -71,6 +71,7 @@ BLMPAY_API_KEY = os.environ.get("BLMPAY_API_KEY")
 BLMPAY_WEBHOOK_SECRET = os.environ.get("BLMPAY_WEBHOOK_SECRET")
 BLMPAY_WEBHOOK_URL = os.environ.get("BLMPAY_WEBHOOK_URL")
 COMMISSION_RATE = 0.02
+FIRST_DEPOSIT_FEE_RATE = 0.01  # 1% on first savings deposit only
 
 # Group-chat media uploads: images, voice notes and videos.
 CHAT_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "chat_uploads")
@@ -127,13 +128,32 @@ def normalize_tz_phone(value):
     raw = re.sub(r"\D", "", str(value or ""))
     if raw.startswith("00"):
         raw = raw[2:]
+    if raw.startswith("255") and len(raw) == 12:
+        return raw
     if raw.startswith("0") and len(raw) == 10:
         raw = "255" + raw[1:]
-    elif raw.startswith("7") and len(raw) == 9:
-        raw = "255" + raw
-    elif raw.startswith("6") and len(raw) == 9:
+    elif len(raw) == 9 and raw[0] in ("6", "7"):
         raw = "255" + raw
     return raw
+
+
+def is_valid_tz_phone(value):
+    """True when value is a valid Tanzania mobile in 255XXXXXXXXX form."""
+    phone = normalize_tz_phone(value)
+    return bool(re.fullmatch(r"255[67]\d{8}", phone))
+
+
+def phone_lookup_variants(value):
+    """Return common stored/login variants so old rows still authenticate."""
+    phone = normalize_tz_phone(value)
+    variants = {phone}
+    if phone.startswith("255") and len(phone) == 12:
+        variants.add("0" + phone[3:])
+        variants.add(phone[3:])
+    raw = re.sub(r"\D", "", str(value or ""))
+    if raw:
+        variants.add(raw)
+    return [v for v in variants if v]
 
 
 def save_chat_media(file_storage):
@@ -388,20 +408,25 @@ def init_db():
 
     # Multi-group migration:
     # Existing installations keep their original group as Group 1.
-    groups = conn.execute("SELECT id, registration_code, video_room FROM group_info ORDER BY id").fetchall()
+    groups = conn.execute(
+        "SELECT id, group_name, registration_code, video_room FROM group_info ORDER BY id"
+    ).fetchall()
     for g in groups:
-        if not g["registration_code"]:
-            code = f"NK-{g['id']:04d}"
-            conn.execute("UPDATE group_info SET registration_code=? WHERE id=?", (code, g["id"]))
         if not g["video_room"]:
             room = "Njiakikoba-" + secrets.token_urlsafe(18).replace("-", "").replace("_", "")
             conn.execute("UPDATE group_info SET video_room=? WHERE id=?", (room, g["id"]))
 
-    # Normalize all group registration codes to the public NK-0001 format.
-    for g in conn.execute("SELECT id, registration_code FROM group_info ORDER BY id").fetchall():
-        desired = f"NK-{g['id']:04d}"
-        if g["registration_code"] != desired:
-            conn.execute("UPDATE group_info SET registration_code=? WHERE id=?", (desired, g["id"]))
+    # Normalize registration codes to NK/{INITIALS}
+    # (numeric #### suffix is reserved for member numbers, not group ids).
+    for g in conn.execute(
+        "SELECT id, group_name, registration_code FROM group_info ORDER BY id"
+    ).fetchall():
+        desired = make_registration_code(g["id"], g["group_name"] or f"GROUP{g['id']}", conn)
+        if (g["registration_code"] or "") != desired:
+            conn.execute(
+                "UPDATE group_info SET registration_code=? WHERE id=?",
+                (desired, g["id"]),
+            )
 
     # Give legacy rows the first group.
     first_group = conn.execute("SELECT id FROM group_info ORDER BY id LIMIT 1").fetchone()
@@ -425,6 +450,36 @@ def init_db():
     # A group may have at most 999 members unless the developer explicitly
     # raises the cap for that particular group.
     conn.execute("UPDATE group_info SET member_cap=999 WHERE member_cap IS NULL OR member_cap < 1")
+
+    # Ensure member_number is unique within each group (fix any legacy duplicates).
+    for g in conn.execute("SELECT id FROM group_info ORDER BY id").fetchall():
+        seen = {}
+        rows = conn.execute(
+            "SELECT id, member_number FROM users WHERE group_id=? ORDER BY id", (g["id"],)
+        ).fetchall()
+        next_num = conn.execute(
+            "SELECT COALESCE(MAX(member_number),0) FROM users WHERE group_id=?", (g["id"],)
+        ).fetchone()[0] or 0
+        for u in rows:
+            mn = u["member_number"]
+            if mn is None or mn in seen:
+                next_num += 1
+                conn.execute("UPDATE users SET member_number=? WHERE id=?", (next_num, u["id"]))
+                seen[next_num] = u["id"]
+            else:
+                seen[mn] = u["id"]
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_group_member "
+            "ON users(group_id, member_number)"
+        )
+    except sqlite3.OperationalError:
+        pass
+    # Phone must remain globally unique (one phone = one account).
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+    except sqlite3.OperationalError:
+        pass
 
     conn.commit()
     conn.close()
@@ -491,10 +546,119 @@ def group_member_number(conn, group_id):
 
 
 def group_from_code(conn, code):
-    return conn.execute(
-        "SELECT * FROM group_info WHERE UPPER(registration_code)=UPPER(?)",
-        (code.strip(),)
+    """Lookup group by registration code.
+
+    Group codes look like NK/CK or NK/MM (optionally NK/CK-02 if initials collide).
+    Member identities look like NK/CK-0012 — those are NOT group join codes.
+    Legacy codes NK-0001 (no slash) still resolve by group id.
+    """
+    raw = (code or "").strip().upper().replace(" ", "")
+    if not raw:
+        return None
+    row = conn.execute(
+        "SELECT * FROM group_info WHERE UPPER(REPLACE(registration_code,' ',''))=?",
+        (raw,),
     ).fetchone()
+    if row:
+        return row
+    # Prefix match: user typed NK/CK while stored is NK/CK-02
+    if raw.startswith("NK/"):
+        row = conn.execute(
+            "SELECT * FROM group_info WHERE UPPER(REPLACE(registration_code,' ','')) LIKE ? "
+            "ORDER BY id LIMIT 1",
+            (raw + "%",),
+        ).fetchone()
+        if row:
+            return row
+    # Legacy only (no slash): NK-0001 → group id
+    if "/" not in raw:
+        m = re.search(r"-(\d{1,6})$", raw)
+        if m:
+            return conn.execute(
+                "SELECT * FROM group_info WHERE id=?", (int(m.group(1)),)
+            ).fetchone()
+    return None
+
+
+_SKIP_WORDS = {
+    "wa", "ya", "za", "la", "cha", "kwa", "na", "the", "of", "and", "group",
+    "kikundi", "society", "asso", "association", "co", "ltd", "limited",
+}
+
+
+def group_initials(group_name):
+    """Build 2–4 letter initials from a group name.
+
+    Examples:
+      CHAPAKAZI / CHAPA KAZI → CK
+      Maji Moto → MM
+      Umoja wa Vijana → UV
+    """
+    name = re.sub(r"[^A-Za-z0-9\s\-]", " ", str(group_name or ""))
+    parts = [p for p in re.split(r"[\s\-]+", name) if p]
+    meaningful = [p for p in parts if p.lower() not in _SKIP_WORDS]
+    if not meaningful:
+        meaningful = parts or ["XX"]
+    if len(meaningful) == 1:
+        word = re.sub(r"[^A-Za-z0-9]", "", meaningful[0]).upper()
+        if len(word) >= 4:
+            # Compound-style single word: first letter + first consonant of 2nd half
+            # CHAPAKAZI → C + K (from KAZI) = CK
+            mid = len(word) // 2
+            vowels = set("AEIOU")
+            second = word[mid]
+            for ch in word[mid:]:
+                if ch not in vowels:
+                    second = ch
+                    break
+            initials = word[0] + second
+        else:
+            initials = (word + "X")[:2]
+    else:
+        initials = "".join(p[0].upper() for p in meaningful if p)[:4]
+    if len(initials) < 2:
+        initials = (initials + "X")[:2]
+    return initials
+
+
+def make_registration_code(group_id, group_name, conn=None):
+    """Group join code: NK/{INITIALS} (or NK/{INITIALS}-{id} if initials collide).
+
+    The numeric #### suffix is reserved for *member* numbers, not group ids.
+    Example group codes: NK/CK , NK/MM
+    """
+    initials = group_initials(group_name)
+    base = f"NK/{initials}"
+    if conn is not None:
+        clash = conn.execute(
+            "SELECT id FROM group_info WHERE UPPER(registration_code)=UPPER(?) AND id!=?",
+            (base, int(group_id)),
+        ).fetchone()
+        if clash:
+            return f"NK/{initials}-{int(group_id):02d}"
+    return base
+
+
+def make_member_code(group_name, member_number):
+    """Member identity: NK/{INITIALS}-{member_number:04d}
+
+    Example: CHAPAKAZI member #12 → NK/CK-0012
+    """
+    initials = group_initials(group_name)
+    try:
+        num = int(member_number or 0)
+    except (TypeError, ValueError):
+        num = 0
+    return f"NK/{initials}-{num:04d}"
+
+
+def current_lang():
+    lang = session.get("lang") or request.args.get("lang") or "sw"
+    return lang if lang in TRANSLATIONS else "sw"
+
+
+def t_dict():
+    return TRANSLATIONS[current_lang()]
 
 
 @app.before_request
@@ -502,8 +666,33 @@ def session_control():
     session.permanent = True
 
 
+@app.context_processor
+def inject_i18n():
+    """Make lang + translations available on every template."""
+    lang = current_lang()
+    return {
+        "lang": lang,
+        "t": TRANSLATIONS[lang],
+        "other_lang": "en" if lang == "sw" else "sw",
+        "other_lang_label": "EN" if lang == "sw" else "SW",
+    }
+
+
+@app.route("/set-lang/<lang_code>")
+def set_lang(lang_code):
+    if lang_code in TRANSLATIONS:
+        session["lang"] = lang_code
+        session.permanent = True
+    nxt = request.args.get("next") or request.referrer or url_for("home")
+    # Avoid open redirect
+    if not nxt.startswith("/") and not nxt.startswith(request.host_url):
+        nxt = url_for("home")
+    return redirect(nxt)
+
+
 @app.route("/")
 def home():
+    # Support legacy ?lang=sw|en links
     lang = request.args.get("lang")
     if lang in ("sw", "en"):
         session["lang"] = lang
@@ -514,49 +703,69 @@ def home():
     ).fetchone()
     integrations = conn.execute("SELECT label, url, icon FROM integrations ORDER BY id").fetchall()
     conn.close()
-    return render_template("index.html", settings=settings, integrations=integrations, lang=session.get("lang", "sw"), t=TRANSLATIONS[session.get("lang", "sw")])
+    return render_template("index.html", settings=settings, integrations=integrations)
 
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         name = request.form.get("full_name", "").strip()
-        phone = normalize_tz_phone(request.form.get("phone", ""))
+        phone_raw = request.form.get("phone", "")
+        phone = normalize_tz_phone(phone_raw)
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         code = request.form.get("group_code", "").strip()
         group_name_input = request.form.get("group_name", "").strip()
 
-        if not name or not phone or len(password) < 8 or not code or not group_name_input:
+        if not name or not phone_raw or len(password) < 8 or not code or not group_name_input:
             flash("Jaza Jina la Kikundi, jina, simu, nywila na Registration Code.", "danger")
+            return render_template("register.html")
+        if not is_valid_tz_phone(phone):
+            flash("Namba ya simu si sahihi. Tumia muundo 07XXXXXXXX au 2557XXXXXXXX.", "danger")
             return render_template("register.html")
 
         conn = db()
         group = group_from_code(conn, code)
         if not group:
             conn.close()
-            flash("Registration Code ya kikundi haijatambuliwa.", "danger")
+            flash("Registration Code ya kikundi haijatambuliwa. Thibitisha code uliyopewa na kiongozi.", "danger")
             return render_template("register.html")
         if group_name_input.casefold() != (group["group_name"] or "").strip().casefold():
             conn.close()
-            flash("Jina la Kikundi halilingani na Registration Code uliyoingiza.", "danger")
+            flash(
+                f"Jina la Kikundi halilingani. Andika jina hasa kama lilivyoandikwa na viongozi "
+                f"(si 'NJIAKIKOBA' — hilo ni jina la mfumo).",
+                "danger",
+            )
             return render_template("register.html")
 
-        member_cap = max(1, int(group["member_cap"] or 999))
+        member_cap = max(1, min(int(group["member_cap"] or 999), 9999))
         current_total = group_member_count(conn, group["id"])
         if current_total >= member_cap:
             conn.close()
             flash(f"{group['group_name']} imefikia ukomo wa wanachama {member_cap}.", "danger")
             return render_template("register.html")
 
+        # Reject if this phone already exists under any stored format.
+        variants = phone_lookup_variants(phone)
+        placeholders = ",".join("?" * len(variants))
+        existing = conn.execute(
+            f"SELECT id, phone FROM users WHERE phone IN ({placeholders})", variants
+        ).fetchone()
+        if existing:
+            conn.close()
+            flash("Namba hii ya simu tayari ina akaunti. Ingia au tumia namba nyingine.", "danger")
+            return render_template("register.html")
+
         try:
             next_number = group_member_number(conn, group["id"])
             new_total = current_total + 1
+            # Always store the canonical 255XXXXXXXXX form.
             conn.execute(
                 """INSERT INTO users
-                   (full_name, phone, email, password, member_number, group_size_at_join, group_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (name, phone, email, generate_password_hash(password),
+                   (full_name, phone, email, password, member_number, group_size_at_join, group_id, status, role)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'member')""",
+                (name, phone, email or None, generate_password_hash(password),
                  next_number, new_total, group["id"])
             )
             conn.execute(
@@ -566,10 +775,21 @@ def register():
                 (f"🔔 {name} amejiunga na {group['group_name']}. Idadi ya sasa: {new_total}.", group["id"])
             )
             conn.commit()
-            flash(f"Akaunti imetengenezwa na umejiunga na {group['group_name']}. Tafadhali ingia.", "success")
+            flash(
+                f"Akaunti imetengenezwa (#{next_number:06d}) na umejiunga na {group['group_name']}. "
+                f"Ingia kwa namba yako ya simu na nywila.",
+                "success",
+            )
             return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
-            flash("Namba hii ya simu tayari ina akaunti.", "danger")
+        except sqlite3.IntegrityError as exc:
+            conn.rollback()
+            msg = str(exc).lower()
+            if "phone" in msg or "unique" in msg:
+                flash("Namba hii ya simu tayari ina akaunti.", "danger")
+            elif "member_number" in msg or "group_member" in msg:
+                flash("Namba ya uanachama imeshindwa kutengenezwa. Jaribu tena.", "danger")
+            else:
+                flash("Usajili umeshindwa. Angalia taarifa zako na jaribu tena.", "danger")
         finally:
             conn.close()
     return render_template("register.html")
@@ -578,12 +798,36 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        phone = normalize_tz_phone(request.form.get("phone", ""))
+        phone_raw = request.form.get("phone", "")
         password = request.form.get("password", "")
+        if not phone_raw or not password:
+            flash("Jaza namba ya simu na nywila.", "danger")
+            return render_template("login.html")
+
+        variants = phone_lookup_variants(phone_raw)
         conn = db()
-        user = conn.execute("SELECT * FROM users WHERE phone=?", (phone,)).fetchone()
+        user = None
+        if variants:
+            placeholders = ",".join("?" * len(variants))
+            user = conn.execute(
+                f"SELECT * FROM users WHERE phone IN ({placeholders})", variants
+            ).fetchone()
+            # Heal legacy phone formats to canonical form after successful match.
+            if user and is_valid_tz_phone(phone_raw) and user["phone"] != normalize_tz_phone(phone_raw):
+                try:
+                    conn.execute(
+                        "UPDATE users SET phone=? WHERE id=?",
+                        (normalize_tz_phone(phone_raw), user["id"]),
+                    )
+                    conn.commit()
+                except sqlite3.IntegrityError:
+                    conn.rollback()
         conn.close()
+
         if user and user["status"] == "active" and check_password_hash(user["password"], password):
+            if not user["group_id"]:
+                flash("Akaunti haina kikundi. Wasiliana na msimamizi.", "danger")
+                return render_template("login.html")
             session.clear()
             session.permanent = True
             session["user_id"] = user["id"]
@@ -591,8 +835,9 @@ def login():
             session["role"] = user["role"]
             session["group_id"] = user["group_id"]
             return redirect(url_for("dashboard"))
-        log_event("login_failed", "Failed member login")
-        flash("Taarifa si sahihi.", "danger")
+
+        log_event("login_failed", f"Failed member login phone={normalize_tz_phone(phone_raw)[:15]}")
+        flash("Taarifa si sahihi. Hakikisha namba ya simu na nywila ulizotumia kusajili.", "danger")
     return render_template("login.html")
 
 
@@ -600,10 +845,26 @@ def login():
 def leader_login():
     """Dedicated leader login; it never grants leader access to ordinary members."""
     if request.method == "POST":
-        phone = normalize_tz_phone(request.form.get("phone", ""))
+        phone_raw = request.form.get("phone", "")
         password = request.form.get("password", "")
+        variants = phone_lookup_variants(phone_raw)
         conn = db()
-        user = conn.execute("SELECT * FROM users WHERE phone=? AND role='leader'", (phone,)).fetchone()
+        user = None
+        if variants:
+            placeholders = ",".join("?" * len(variants))
+            user = conn.execute(
+                f"SELECT * FROM users WHERE phone IN ({placeholders}) AND role='leader'",
+                variants,
+            ).fetchone()
+            if user and is_valid_tz_phone(phone_raw) and user["phone"] != normalize_tz_phone(phone_raw):
+                try:
+                    conn.execute(
+                        "UPDATE users SET phone=? WHERE id=?",
+                        (normalize_tz_phone(phone_raw), user["id"]),
+                    )
+                    conn.commit()
+                except sqlite3.IntegrityError:
+                    conn.rollback()
         conn.close()
         if user and user["status"] == "active" and check_password_hash(user["password"], password):
             session.clear()
@@ -614,7 +875,7 @@ def leader_login():
             session["group_id"] = user["group_id"]
             return redirect(url_for("dashboard"))
         log_event("leader_login_failed", "Failed leader login")
-        flash("Taarifa za kiongozi si sahihi.", "danger")
+        flash("Taarifa za kiongozi si sahihi. Hakikisha namba na nywila.", "danger")
     return render_template("leader_login.html")
 
 
@@ -625,10 +886,15 @@ def dashboard():
     user = conn.execute(
         """SELECT full_name, phone, payment_phone, payment_network, payout_method,
                   bank_code, bank_account, bank_account_name, email, savings,
-                  loan_balance, role, member_number, group_size_at_join, group_id
+                  loan_balance, role, member_number, group_size_at_join, group_id, status
            FROM users WHERE id=?""",
         (session["user_id"],)
     ).fetchone()
+    if not user or user["status"] != "active" or not user["group_id"]:
+        conn.close()
+        session.clear()
+        flash("Akaunti haipatikani au haijaamilishwa. Ingia tena.", "danger")
+        return redirect(url_for("login"))
     transactions = conn.execute(
         """SELECT tx_ref, tx_type, amount, commission, group_amount, status, created_at
            FROM transactions WHERE user_id=? AND group_id=? ORDER BY id DESC LIMIT 10""",
@@ -639,9 +905,20 @@ def dashboard():
         (user["group_id"],)
     ).fetchone()
     conn.close()
+    if not group:
+        session.clear()
+        flash("Kikundi cha akaunti yako hakijapatikana.", "danger")
+        return redirect(url_for("login"))
     share_url = url_for("home", _external=True)
-    return render_template("dashboard.html", user=user, transactions=transactions,
-                           share_url=share_url, group=group)
+    member_code = make_member_code(group["group_name"], user["member_number"])
+    return render_template(
+        "dashboard.html",
+        user=user,
+        transactions=transactions,
+        share_url=share_url,
+        group=group,
+        member_code=member_code,
+    )
 
 
 @app.route("/register-leaders", methods=["GET", "POST"])
@@ -649,7 +926,8 @@ def register_leaders():
     if request.method == "POST":
         title = request.form.get("leader_title", "Kiongozi").strip()[:40]
         name = request.form.get("full_name", "").strip()
-        phone = normalize_tz_phone(request.form.get("phone", ""))
+        phone_raw = request.form.get("phone", "")
+        phone = normalize_tz_phone(phone_raw)
         id_type = request.form.get("id_type", "")
         id_number = request.form.get("id_number", "").strip()
         password = request.form.get("password", "")
@@ -658,12 +936,14 @@ def register_leaders():
         face_image = request.form.get("face_image", "")
         biometric_credential = request.form.get("biometric_credential", "").strip()
 
-        if not all([name, phone, id_type, id_number, code, group_name_input, face_image, biometric_credential]) or len(password) < 8:
+        if not all([name, phone_raw, id_type, id_number, code, group_name_input, face_image, biometric_credential]) or len(password) < 8:
             flash("Kiongozi lazima ajaze Jina la Kikundi, ID, Face ID na fingerprint/biometric.", "danger")
+            return render_template("register_leaders.html")
+        if not is_valid_tz_phone(phone):
+            flash("Namba ya simu si sahihi. Tumia muundo 07XXXXXXXX au 2557XXXXXXXX.", "danger")
             return render_template("register_leaders.html")
         if not validate_leader_id(id_type, id_number):
             flash("Kitambulisho hakijaonekana kuwa na format sahihi. Usajili umekataliwa.", "danger")
-            return render_template("register_leaders.html")
             return render_template("register_leaders.html")
 
         conn = db()
@@ -674,13 +954,40 @@ def register_leaders():
             return render_template("register_leaders.html")
         if group_name_input.casefold() != (group["group_name"] or "").strip().casefold():
             conn.close()
-            flash("Jina la Kikundi halilingani na Registration Code uliyoingiza.", "danger")
+            flash(
+                "Jina la Kikundi halilingani na Registration Code. "
+                "Andika jina hasa la kikundi (si jina la mfumo NJIAKIKOBA).",
+                "danger",
+            )
             return render_template("register_leaders.html")
         try:
             face_filename = save_data_image(face_image, "face")
         except ValueError as exc:
             conn.close()
             flash(str(exc), "danger")
+            return render_template("register_leaders.html")
+
+        # WebAuthn: store credential identifier only (never biometric templates).
+        try:
+            bio = json.loads(biometric_credential)
+            if not isinstance(bio, dict) or not bio.get("id"):
+                raise ValueError("invalid")
+            # Keep a compact, non-sensitive record for audit.
+            biometric_credential = json.dumps({
+                "id": str(bio.get("id"))[:512],
+                "type": str(bio.get("type") or "public-key")[:40],
+                "rawId": str(bio.get("rawId") or "")[:1024],
+                "createdAt": str(bio.get("createdAt") or datetime.utcnow().isoformat()),
+                "rpId": str(bio.get("rpId") or "")[:120],
+                "method": str(bio.get("method") or "webauthn-platform")[:40],
+            })
+        except Exception:
+            conn.close()
+            flash(
+                "WebAuthn credential si sahihi. Kamilisha hatua ya Fingerprint/Device Biometric "
+                "kwenye kivinjari kinachotumia WebAuthn.",
+                "danger",
+            )
             return render_template("register_leaders.html")
 
         leader_count = conn.execute(
@@ -821,6 +1128,368 @@ def developer_dashboard():
     )
 
 
+@app.route("/developer-dashboard/support", methods=["POST"])
+@developer_required
+def developer_support_action():
+    """Help members/leaders who cannot register or log in.
+
+    Requires exact full_name + member_number (+ optional group) to reduce
+    accidental account takeover. Logs every action.
+    """
+    action = (request.form.get("action") or "").strip().lower()
+    full_name = (request.form.get("full_name") or "").strip()
+    member_number_raw = (request.form.get("member_number") or "").strip()
+    group_id = request.form.get("group_id", type=int)
+    phone_hint = normalize_tz_phone(request.form.get("phone") or "")
+    new_password = request.form.get("new_password") or ""
+    consent = request.form.get("consent") == "on"
+
+    if not consent:
+        flash("Lazima uthibitishe kuwa una idhini ya mwanachama/kiongozi kabla ya kusaidia.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    if not full_name or not member_number_raw:
+        flash("Jaza jina kamili na namba ya uanachama.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    try:
+        member_number = int(re.sub(r"\D", "", member_number_raw) or "0")
+    except ValueError:
+        flash("Namba ya uanachama si sahihi.", "danger")
+        return redirect(url_for("developer_dashboard"))
+
+    conn = db()
+    query = """SELECT u.*, g.group_name FROM users u
+               LEFT JOIN group_info g ON g.id=u.group_id
+               WHERE LOWER(TRIM(u.full_name))=LOWER(TRIM(?)) AND u.member_number=?"""
+    params = [full_name, member_number]
+    if group_id:
+        query += " AND u.group_id=?"
+        params.append(group_id)
+    if phone_hint and is_valid_tz_phone(phone_hint):
+        query += " AND u.phone=?"
+        params.append(phone_hint)
+    matches = conn.execute(query, params).fetchall()
+
+    if len(matches) == 0:
+        conn.close()
+        flash("Hakuna akaunti inayolingana na jina + namba ya uanachama uliyojaza.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    if len(matches) > 1:
+        conn.close()
+        flash("Kuna akaunti zaidi ya moja zinazofanana. Ongeza kikundi au namba ya simu ili kubainisha.", "warning")
+        return redirect(url_for("developer_dashboard"))
+
+    user = matches[0]
+
+    if action == "reset_password":
+        if len(new_password) < 8:
+            conn.close()
+            flash("Nywila mpya lazima iwe angalau herufi 8.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        conn.execute(
+            "UPDATE users SET password=? WHERE id=?",
+            (generate_password_hash(new_password), user["id"]),
+        )
+        conn.execute(
+            "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+            (f"Developer reset password for user#{user['id']} {user['full_name']} "
+             f"(member #{user['member_number']}, group {user['group_name']})",),
+        )
+        conn.commit()
+        conn.close()
+        log_event("developer_password_reset", f"user_id={user['id']}")
+        flash(
+            f"Nywila ya {user['full_name']} (#{user['member_number']:06d}, {user['group_name']}) "
+            f"imewekwa upya. Mjulishe nywila mpya kwa usalama.",
+            "success",
+        )
+        return redirect(url_for("developer_dashboard"))
+
+    if action == "activate":
+        conn.execute("UPDATE users SET status='active' WHERE id=?", (user["id"],))
+        conn.execute(
+            "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+            (f"Developer activated user#{user['id']} {user['full_name']}",),
+        )
+        conn.commit()
+        conn.close()
+        flash(f"Akaunti ya {user['full_name']} imeamilishwa.", "success")
+        return redirect(url_for("developer_dashboard"))
+
+    if action == "login_as":
+        # Temporary support session: developer enters the member account with audit trail.
+        conn.execute(
+            "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+            (f"Developer support login-as user#{user['id']} {user['full_name']} "
+             f"(member #{user['member_number']}, group {user['group_name']})",),
+        )
+        conn.commit()
+        conn.close()
+        log_event("developer_login_as", f"user_id={user['id']}")
+        session.clear()
+        session.permanent = True
+        session["user_id"] = user["id"]
+        session["full_name"] = user["full_name"]
+        session["role"] = user["role"]
+        session["group_id"] = user["group_id"]
+        session["is_developer"] = True
+        session["support_mode"] = True
+        session["support_for"] = user["id"]
+        flash(
+            f"Umeingia kwa msaada kwenye akaunti ya {user['full_name']}. "
+            f"Tumia kwa ajili ya kusaidia tu, kisha toka.",
+            "success",
+        )
+        return redirect(url_for("dashboard"))
+
+    conn.close()
+    flash("Chagua kitendo: reset_password, activate, au login_as.", "danger")
+    return redirect(url_for("developer_dashboard"))
+
+
+
+@app.route("/developer-dashboard/groups/<int:group_id>/update", methods=["POST"])
+@developer_required
+def developer_group_update(group_id):
+    """Update group name, WhatsApp, cap, or regenerate registration code."""
+    action = (request.form.get("action") or "save").strip().lower()
+    conn = db()
+    group = conn.execute("SELECT * FROM group_info WHERE id=?", (group_id,)).fetchone()
+    if not group:
+        conn.close()
+        flash("Kikundi hakipatikani.", "danger")
+        return redirect(url_for("developer_groups"))
+
+    if action == "regenerate_code":
+        code = make_registration_code(group_id, group["group_name"], conn)
+        conn.execute("UPDATE group_info SET registration_code=? WHERE id=?", (code, group_id))
+        conn.execute(
+            "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+            (f"Developer regenerated registration code for group#{group_id}: {code}",),
+        )
+        conn.commit()
+        conn.close()
+        flash(f"Registration Code mpya: {code}", "success")
+        return redirect(url_for("developer_group_inspect", group_id=group_id))
+
+    if action == "save":
+        new_name = (request.form.get("group_name") or "").strip()[:100]
+        whatsapp = (request.form.get("whatsapp_group_url") or "").strip()
+        cap_raw = request.form.get("member_cap", "").strip()
+        settlement_phone = (request.form.get("settlement_phone") or "").strip()
+        notes_log = []
+
+        if new_name:
+            forbidden = {"njiakikoba", "njiakikoba"}
+            if new_name.casefold().replace(" ", "") in {"njiakikoba", "njiakikoba"}:
+                conn.close()
+                flash("Jina 'NJIAKIKOBA' haliwezi kuwa jina la kikundi.", "danger")
+                return redirect(url_for("developer_group_inspect", group_id=group_id))
+            if new_name != group["group_name"]:
+                code = make_registration_code(group_id, new_name, conn)
+                conn.execute(
+                    "UPDATE group_info SET group_name=?, registration_code=? WHERE id=?",
+                    (new_name, code, group_id),
+                )
+                notes_log.append(f"jina→{new_name}, code→{code}")
+
+        if whatsapp:
+            if not whatsapp.startswith("https://chat.whatsapp.com/"):
+                conn.close()
+                flash("Link ya WhatsApp lazima ianze na https://chat.whatsapp.com/", "danger")
+                return redirect(url_for("developer_group_inspect", group_id=group_id))
+            conn.execute(
+                "UPDATE group_info SET whatsapp_group_url=? WHERE id=?",
+                (whatsapp, group_id),
+            )
+            notes_log.append("whatsapp updated")
+        elif request.form.get("clear_whatsapp") == "on":
+            conn.execute("UPDATE group_info SET whatsapp_group_url=NULL WHERE id=?", (group_id,))
+            notes_log.append("whatsapp cleared")
+
+        if cap_raw:
+            try:
+                cap = min(max(1, int(cap_raw)), 9999)
+            except ValueError:
+                conn.close()
+                flash("Ukomo si sahihi.", "danger")
+                return redirect(url_for("developer_group_inspect", group_id=group_id))
+            total = conn.execute(
+                "SELECT COUNT(*) FROM users WHERE group_id=? AND status='active'", (group_id,)
+            ).fetchone()[0]
+            if cap < total:
+                conn.close()
+                flash(f"Ukomo ({cap}) hauwezi kuwa chini ya wanachama waliopo ({total}).", "danger")
+                return redirect(url_for("developer_group_inspect", group_id=group_id))
+            conn.execute("UPDATE group_info SET member_cap=? WHERE id=?", (cap, group_id))
+            notes_log.append(f"cap→{cap}")
+
+        if settlement_phone:
+            sp = normalize_tz_phone(settlement_phone)
+            if not is_valid_tz_phone(sp):
+                conn.close()
+                flash("Namba ya settlement si sahihi.", "danger")
+                return redirect(url_for("developer_group_inspect", group_id=group_id))
+            conn.execute("UPDATE group_info SET settlement_phone=? WHERE id=?", (sp, group_id))
+            notes_log.append("settlement_phone updated")
+
+        if notes_log:
+            conn.execute(
+                "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+                (f"Developer updated group#{group_id}: " + "; ".join(notes_log),),
+            )
+            conn.commit()
+            flash("Kikundi kimesasishwa: " + ", ".join(notes_log), "success")
+        else:
+            flash("Hakuna mabadiliko yaliyowekwa.", "warning")
+        conn.close()
+        return redirect(url_for("developer_group_inspect", group_id=group_id))
+
+    conn.close()
+    flash("Kitendo hakijatambuliwa.", "danger")
+    return redirect(url_for("developer_groups"))
+
+
+@app.route("/developer-dashboard/members/update", methods=["POST"])
+@developer_required
+def developer_member_update():
+    """Support tools: update phone, reset password, change status, fix member_number."""
+    action = (request.form.get("action") or "").strip().lower()
+    user_id = request.form.get("user_id", type=int)
+    consent = request.form.get("consent") == "on"
+    if not consent:
+        flash("Lazima uthibitishe idhini ya mmiliki wa akaunti.", "danger")
+        return redirect(url_for("developer_dashboard"))
+    if not user_id:
+        flash("Chagua mwanachama.", "danger")
+        return redirect(url_for("developer_dashboard"))
+
+    conn = db()
+    user = conn.execute(
+        """SELECT u.*, g.group_name FROM users u
+           LEFT JOIN group_info g ON g.id=u.group_id WHERE u.id=?""",
+        (user_id,),
+    ).fetchone()
+    if not user:
+        conn.close()
+        flash("Mwanachama hakupatikani.", "danger")
+        return redirect(url_for("developer_dashboard"))
+
+    if action == "reset_password":
+        new_password = request.form.get("new_password") or ""
+        if len(new_password) < 8:
+            conn.close()
+            flash("Nywila mpya lazima iwe angalau herufi 8.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        conn.execute(
+            "UPDATE users SET password=? WHERE id=?",
+            (generate_password_hash(new_password), user_id),
+        )
+        msg = f"Developer reset password user#{user_id} {user['full_name']}"
+    elif action == "update_phone":
+        phone = normalize_tz_phone(request.form.get("phone") or "")
+        if not is_valid_tz_phone(phone):
+            conn.close()
+            flash("Namba ya simu si sahihi.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        try:
+            conn.execute("UPDATE users SET phone=? WHERE id=?", (phone, user_id))
+            msg = f"Developer updated phone user#{user_id} → {phone}"
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            conn.close()
+            flash("Namba hii ya simu tayari inatumika na akaunti nyingine.", "danger")
+            return redirect(url_for("developer_dashboard"))
+    elif action == "set_status":
+        status = (request.form.get("status") or "").strip().lower()
+        if status not in {"active", "suspended", "inactive"}:
+            conn.close()
+            flash("Status si sahihi.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        conn.execute("UPDATE users SET status=? WHERE id=?", (status, user_id))
+        msg = f"Developer set status={status} user#{user_id}"
+    elif action == "reassign_member_number":
+        try:
+            mn = int(re.sub(r"\\D", "", request.form.get("member_number") or "0") or "0")
+        except ValueError:
+            mn = 0
+        if mn < 1:
+            conn.close()
+            flash("Namba ya uanachama si sahihi.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        clash = conn.execute(
+            "SELECT id FROM users WHERE group_id=? AND member_number=? AND id!=?",
+            (user["group_id"], mn, user_id),
+        ).fetchone()
+        if clash:
+            conn.close()
+            flash("Namba hiyo ya uanachama tayari inatumika kwenye kikundi hiki.", "danger")
+            return redirect(url_for("developer_dashboard"))
+        conn.execute("UPDATE users SET member_number=? WHERE id=?", (mn, user_id))
+        msg = f"Developer set member_number={mn} user#{user_id}"
+    elif action == "login_as":
+        conn.execute(
+            "INSERT INTO system_logs (level, message) VALUES ('INFO', ?)",
+            (f"Developer support login-as user#{user_id} {user['full_name']}",),
+        )
+        conn.commit()
+        conn.close()
+        log_event("developer_login_as", f"user_id={user_id}")
+        session.clear()
+        session.permanent = True
+        session["user_id"] = user["id"]
+        session["full_name"] = user["full_name"]
+        session["role"] = user["role"]
+        session["group_id"] = user["group_id"]
+        session["is_developer"] = True
+        session["support_mode"] = True
+        flash(f"Umeingia kwa msaada kwenye akaunti ya {user['full_name']}.", "success")
+        return redirect(url_for("dashboard"))
+    else:
+        conn.close()
+        flash("Chagua kitendo sahihi.", "danger")
+        return redirect(url_for("developer_dashboard"))
+
+    conn.execute("INSERT INTO system_logs (level, message) VALUES ('INFO', ?)", (msg,))
+    conn.commit()
+    conn.close()
+    log_event("developer_member_update", msg[:200])
+    flash(f"Imefanikiwa: {msg}", "success")
+    return redirect(url_for("developer_dashboard"))
+
+
+@app.route("/developer-dashboard/support/search", methods=["GET", "POST"])
+@developer_required
+def developer_support_search():
+    """Search members for support desk."""
+    q = (request.form.get("q") or request.args.get("q") or "").strip()
+    group_id = request.form.get("group_id", type=int) or request.args.get("group_id", type=int)
+    conn = db()
+    sql = """SELECT u.id, u.full_name, u.phone, u.member_number, u.role, u.status,
+                    u.group_id, g.group_name, g.registration_code
+             FROM users u LEFT JOIN group_info g ON g.id=u.group_id WHERE 1=1"""
+    params = []
+    if q:
+        phone = normalize_tz_phone(q)
+        sql += " AND (u.full_name LIKE ? OR u.phone LIKE ? OR CAST(u.member_number AS TEXT)=?)"
+        params.extend([f"%{q}%", f"%{phone or q}%", re.sub(r"\\D", "", q) or q])
+    if group_id:
+        sql += " AND u.group_id=?"
+        params.append(group_id)
+    sql += " ORDER BY u.id DESC LIMIT 30"
+    rows = conn.execute(sql, params).fetchall()
+    groups = conn.execute(
+        "SELECT id, group_name, registration_code, member_cap FROM group_info ORDER BY id"
+    ).fetchall()
+    conn.close()
+    return render_template(
+        "developer_support.html",
+        results=rows,
+        groups=groups,
+        q=q,
+        selected_group_id=group_id,
+    )
+
+
 @app.route("/developer-dashboard/groups", methods=["GET", "POST"])
 @developer_required
 def developer_groups():
@@ -848,20 +1517,39 @@ def developer_groups():
             flash("Jina la kikundi linahitajika.", "danger")
             return redirect(url_for("developer_groups"))
 
+        # NJIAKIKOBA is the platform name, not a group name.
+        forbidden = {"njiakikoba", "njia kikoba", "njia-kikoba"}
+        if group_name.casefold().replace(" ", "") in {x.replace(" ", "") for x in forbidden} or group_name.casefold() == "njiakikoba":
+            conn.close()
+            flash(
+                "Jina 'NJIAKIKOBA' ni jina la mfumo, si jina la kikundi. "
+                "Tumia jina la kikundi chenyewe (mfano: CHAPAKAZI GROUP).",
+                "danger",
+            )
+            return redirect(url_for("developer_groups"))
+
+        # Default member cap is 999 per group (developer may raise later).
+        if cap > 999 and not request.form.get("force_high_cap"):
+            cap = 999
+
         try:
             cur = conn.execute(
                 "INSERT INTO group_info (group_name, member_cap, payment_number, whatsapp_group_url) VALUES (?, ?, ?, ?)",
                 (group_name, cap, os.environ.get("GROUP_PAYMENT_NUMBER"), whatsapp_group_url or None)
             )
             gid = cur.lastrowid
-            code = f"NK-{gid:04d}"
+            code = make_registration_code(gid, group_name, conn)
             room = "Njiakikoba-" + secrets.token_urlsafe(18).replace("-", "").replace("_", "")
             conn.execute(
                 "UPDATE group_info SET registration_code=?, video_room=? WHERE id=?",
                 (code, room, gid)
             )
             conn.commit()
-            flash(f"Kikundi {group_name} kimeundwa. Registration Code: {code}", "success")
+            flash(
+                f"Kikundi {group_name} kimeundwa. Registration Code ya kikundi: {code}. "
+                f"Namba ya mwanachama itakuwa mfano: {make_member_code(group_name, 1)}.",
+                "success",
+            )
         except sqlite3.IntegrityError:
             conn.rollback()
             flash("Kikundi hakikuundwa.", "danger")
@@ -1255,6 +1943,79 @@ def leader_loan_disburse():
     return jsonify({"success": True, "reference": ref, "message": "Malipo ya mkopo yamepelekwa kwenye njia ya mwanakikundi."}), 201
 
 
+
+def settle_system_fees(conn, tx):
+    """Send platform fees (2% commission + optional 1% first-deposit) to DEVELOPER_LIPA_NUMBER.
+
+    Returns (status_text, detail_message). Does not raise.
+    """
+    fee_total = round(float(tx["commission"] or 0) + float(tx["first_deposit_fee"] or 0), 2)
+    if fee_total <= 0:
+        return "not_applicable", "Hakuna ada ya mfumo kwenye muamala huu."
+    dest = (DEVELOPER_LIPA_NUMBER or "").strip()
+    if not dest:
+        return "not_configured", "DEVELOPER_LIPA_NUMBER haijawekwa kwenye environment."
+    if not BLMPAY_API_KEY:
+        return "not_configured", "BLMPAY_API_KEY haipo."
+
+    # Normalize if it looks like a TZ phone
+    phone = normalize_tz_phone(dest)
+    network = (GROUP_SETTLEMENT_NETWORK or "MIXX_BY_YAS").upper()
+    tx_ref = tx["tx_ref"]
+    payout_ref = f"FEE-{tx_ref}"
+
+    # Prefer mobile payout when destination is a valid TZ mobile.
+    if is_valid_tz_phone(phone):
+        payload = {
+            "amount": fee_total,
+            "currency": "TZS",
+            "channel": "mobile",
+            "recipient_phone": phone,
+            "network": network,
+            "narration": f"NJIAKIKOBA system fee {tx_ref}",
+            "metadata": {
+                "tx_ref": tx_ref,
+                "type": "system_commission",
+                "commission": float(tx["commission"] or 0),
+                "first_deposit_fee": float(tx["first_deposit_fee"] or 0),
+            },
+        }
+    else:
+        # Lipa / merchant number stored as opaque destination — still attempt mobile channel
+        payload = {
+            "amount": fee_total,
+            "currency": "TZS",
+            "channel": "mobile",
+            "recipient_phone": dest,
+            "network": network,
+            "narration": f"NJIAKIKOBA system fee {tx_ref}",
+            "metadata": {"tx_ref": tx_ref, "type": "system_commission", "dest": "lipa_or_custom"},
+        }
+
+    try:
+        r = requests.post(
+            f"{BLMPAY_BASE_URL}/payouts/send",
+            headers={
+                "Authorization": f"Bearer {BLMPAY_API_KEY}",
+                "Content-Type": "application/json",
+                "Idempotency-Key": payout_ref,
+            },
+            json=payload,
+            timeout=25,
+        )
+        result = r.json() if r.content else {}
+    except Exception as exc:
+        log_event("system_fee_settlement_error", str(exc)[:300])
+        return "failed", f"Payout error: {str(exc)[:200]}"
+
+    if r.status_code < 400 and str(result.get("status", "")).lower() in ("success", "pending", "processing", "ok"):
+        ref = (result.get("data") or {}).get("reference") or result.get("reference") or payout_ref
+        return "settled", f"Ada TZS {fee_total:,.2f} imetumwa (ref {ref})"
+    msg = result.get("message") or result.get("error") or f"HTTP {r.status_code}"
+    log_event("system_fee_settlement_rejected", msg[:300])
+    return "failed", msg[:300]
+
+
 @app.route("/api/payment/create", methods=["POST"])
 @member_required
 def create_payment():
@@ -1282,7 +2043,7 @@ def create_payment():
         (session["user_id"], user["group_id"])
     ).fetchone()[0] == 0
     conn.close()
-    first_deposit_fee = round(amount*0.01, 2) if is_first_deposit else 0
+    first_deposit_fee = round(amount*FIRST_DEPOSIT_FEE_RATE, 2) if is_first_deposit else 0
     group_amount=round(amount-commission-first_deposit_fee,2)
     tx_ref="NJK-"+secrets.token_hex(8).upper()
     if not BLMPAY_API_KEY or not BLMPAY_WEBHOOK_URL:
@@ -1323,14 +2084,23 @@ def blmpay_webhook():
         conn.execute("UPDATE transactions SET status='paid', payment_reference=COALESCE(payment_reference, ?) WHERE tx_ref=?",(data.get("reference"),tx_ref))
         if tx["tx_type"]=="savings": conn.execute("UPDATE users SET savings=savings+? WHERE id=?",(tx["group_amount"],tx["user_id"]))
         else: conn.execute("UPDATE users SET loan_balance=MAX(0,loan_balance-?) WHERE id=?",(tx["group_amount"],tx["user_id"]))
-        # The Developer destination is a secret Lipa Namba. Do NOT put it in HTML/JS.
-        # BLMPay's documented payout API sends to verified mobile/bank recipients, not Lipa Namba.
-        # Therefore this code records the 2% fee for settlement through the merchant's approved Lipa/settlement integration,
-        # instead of pretending a payout to the Lipa Namba happened.
-        dev_status="configured" if DEVELOPER_LIPA_NUMBER else "not_configured"
-        grp_status="configured" if GROUP_SETTLEMENT_PHONE else "not_configured"
-        conn.execute("UPDATE transactions SET developer_settlement_status=?, group_settlement_status=? WHERE tx_ref=?",(dev_status,grp_status,tx_ref))
-        conn.execute("INSERT INTO system_logs(level,message) VALUES(?,?)",("INFO",f"Paid {tx_ref}: 2% operating fee recorded server-side; destination secret configured={bool(DEVELOPER_LIPA_NUMBER)}"))
+        # Credit member with net group_amount; platform fees go to DEVELOPER_LIPA_NUMBER.
+        tx = conn.execute("SELECT * FROM transactions WHERE tx_ref=?", (tx_ref,)).fetchone()
+        dev_status, detail = settle_system_fees(conn, tx)
+        grp_status = "configured" if GROUP_SETTLEMENT_PHONE else "not_configured"
+        conn.execute(
+            "UPDATE transactions SET developer_settlement_status=?, group_settlement_status=? WHERE tx_ref=?",
+            (dev_status, grp_status, tx_ref),
+        )
+        fee_total = round(float(tx["commission"] or 0) + float(tx["first_deposit_fee"] or 0), 2)
+        conn.execute(
+            "INSERT INTO system_logs(level,message) VALUES(?,?)",
+            (
+                "INFO" if dev_status == "settled" else "WARNING",
+                f"Paid {tx_ref}: member net TZS {float(tx['group_amount']):,.2f}; "
+                f"system fees TZS {fee_total:,.2f} → {dev_status}: {detail}",
+            ),
+        )
     elif event in ("payment.failed","payment.expired","payment.cancelled","payment.voided") or status in ("failed","expired","cancelled","voided"):
         conn.execute("UPDATE transactions SET status='failed' WHERE tx_ref=? AND status!='paid'",(tx_ref,))
     conn.commit(); conn.close(); return "OK",200
@@ -1506,8 +2276,18 @@ def video_call():
         flash("Chumba cha conference hakijapatikana.", "danger")
         return redirect(url_for("group_chat"))
 
+    # Ensure every group has a dedicated Jitsi room so members of the same
+    # group always meet in one shared call without colliding with other groups.
+    room = group["video_room"]
+    if not room:
+        room = "Njiakikoba-" + secrets.token_urlsafe(18).replace("-", "").replace("_", "")
+        conn = db()
+        conn.execute("UPDATE group_info SET video_room=? WHERE id=?", (room, group["id"]))
+        conn.commit()
+        conn.close()
+
     return render_template(
-        "video_call.html", actor=actor, group=group, room_name=group["video_room"]
+        "conference_call.html", actor=actor, group=group, room_name=room
     )
 
 
@@ -1527,7 +2307,10 @@ def certificate():
         "SELECT group_name FROM group_info WHERE id=?", (user["group_id"],)
     ).fetchone()
     conn.close()
-    return render_template("certificate.html", user=user, leaders=leaders, group=group)
+    member_code = make_member_code(group["group_name"] if group else "", user["member_number"])
+    return render_template(
+        "certificate.html", user=user, leaders=leaders, group=group, member_code=member_code
+    )
 
 
 @app.route("/receipt/<tx_ref>")
