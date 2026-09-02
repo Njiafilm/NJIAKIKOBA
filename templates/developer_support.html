@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Support Desk | Developer</title>
+<link rel="stylesheet" href="{{url_for('static',filename='style.css')}}">
+<style>
+.page{max-width:1100px;margin:auto;padding:16px}
+.card{background:#fff;border:1px solid #dce5df;border-radius:14px;padding:16px;margin-bottom:14px}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px;border-bottom:1px solid #e7ece9;text-align:left;font-size:14px}
+th{background:#f4f7f5}
+.muted{color:#617067}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{font-weight:800;display:block;margin-bottom:4px;font-size:13px}
+input,select{width:100%;padding:10px;border:1px solid #bdc9c1;border-radius:8px}
+.btn{display:inline-block;background:#0e7a34;color:#fff!important;border:0;border-radius:9px;padding:10px 12px;font-weight:900;cursor:pointer;text-decoration:none}
+.btn-dark{background:#12321c}
+.btn-warn{background:#a16207}
+.small{font-size:12px}
+.actions form{display:inline}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="brand">🔐 DEVELOPER · SUPPORT DESK</span>
+  <div class="navlinks">
+    <a href="/developer-dashboard" class="back-btn">← Dashboard</a>
+    <a href="/logout">Toka</a>
+  </div>
+</nav>
+<main class="page">
+  <div class="card">
+    <h1>🛟 Support Desk — Tafuta &amp; Saidia Akaunti</h1>
+    <p class="muted">Tafuta kwa jina, simu, au namba ya uanachama. Kisha chagua kitendo cha msaada. Kila hatua inaandikwa kwenye logs.</p>
+    {% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
+    <form method="post" action="/developer-dashboard/support/search" class="grid" style="align-items:end">
+      <div><label>Tafuta (jina / simu / #uanachama)</label><input name="q" value="{{ q or '' }}" placeholder="Juma / 2557... / 12"></div>
+      <div><label>Kikundi</label>
+        <select name="group_id">
+          <option value="">— Vyote —</option>
+          {% for g in groups %}
+          <option value="{{g['id']}}" {% if selected_group_id==g['id'] %}selected{% endif %}>{{g['group_name']}} ({{g['registration_code']}})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div><button class="btn" type="submit">🔍 Tafuta</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Matokeo</h2>
+    <div class="table-wrap">
+      <table>
+        <tr>
+          <th>ID</th><th>Jina</th><th>Simu</th><th>#</th><th>Role</th><th>Status</th><th>Kikundi / Code</th><th>Vitendo</th>
+        </tr>
+        {% for u in results %}
+        <tr>
+          <td>{{u['id']}}</td>
+          <td><strong>{{u['full_name']}}</strong></td>
+          <td>{{u['phone']}}</td>
+          <td>{{ '%06d'|format(u['member_number']) if u['member_number'] else '—' }}</td>
+          <td>{{u['role']}}</td>
+          <td>{{u['status']}}</td>
+          <td>{{u['group_name'] or '—'}}<br><span class="small">{{u['registration_code'] or ''}}</span></td>
+          <td>
+            <form method="post" action="/developer-dashboard/members/update" class="actions" style="margin-bottom:6px" onsubmit="return confirm('Thibitisha una idhini?');">
+              <input type="hidden" name="user_id" value="{{u['id']}}">
+              <input type="hidden" name="consent" value="on">
+              <input type="hidden" name="action" value="reset_password">
+              <input name="new_password" placeholder="Nywila mpya (8+)" minlength="8" required style="width:140px;display:inline-block">
+              <button class="btn btn-warn" type="submit">🔑 Reset</button>
+            </form>
+            <form method="post" action="/developer-dashboard/members/update" class="actions" style="margin-bottom:6px" onsubmit="return confirm('Thibitisha?');">
+              <input type="hidden" name="user_id" value="{{u['id']}}">
+              <input type="hidden" name="consent" value="on">
+              <input type="hidden" name="action" value="update_phone">
+              <input name="phone" placeholder="2557XXXXXXXX" style="width:140px;display:inline-block">
+              <button class="btn" type="submit">📱 Simu</button>
+            </form>
+            <form method="post" action="/developer-dashboard/members/update" class="actions" style="margin-bottom:6px" onsubmit="return confirm('Thibitisha?');">
+              <input type="hidden" name="user_id" value="{{u['id']}}">
+              <input type="hidden" name="consent" value="on">
+              <input type="hidden" name="action" value="set_status">
+              <select name="status" style="width:110px;display:inline-block">
+                <option value="active">active</option>
+                <option value="suspended">suspended</option>
+                <option value="inactive">inactive</option>
+              </select>
+              <button class="btn btn-dark" type="submit">Status</button>
+            </form>
+            <form method="post" action="/developer-dashboard/members/update" class="actions" onsubmit="return confirm('Ingia kwenye akaunti hii kwa msaada?');">
+              <input type="hidden" name="user_id" value="{{u['id']}}">
+              <input type="hidden" name="consent" value="on">
+              <input type="hidden" name="action" value="login_as">
+              <button class="btn" type="submit">👤 Login-as</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="muted">Hakuna matokeo. Tafuta hapo juu.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+</main>
+</body>
+</html>

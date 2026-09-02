@@ -9,8 +9,9 @@
 <div class="card"><h1>🏘️ Usimamizi wa Vikundi</h1><p class="muted">Sehemu hii ni ya Developer pekee. Wanakikundi hawawezi kuiona.</p>
 {% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
 <form method="post">
-<div class="field"><label>Jina la Kikundi</label><input name="group_name" placeholder="Kikundi A" required></div>
-<div class="field"><label>Ukomo wa Wanachama / Upgrade</label><input type="number" name="member_cap" min="1" max="9999" value="999"></div>
+<div class="field"><label>Jina la Kikundi</label><input name="group_name" placeholder="Mfano: CHAPAKAZI GROUP" required>
+<p class="muted" style="margin:6px 0 0;font-size:13px">Usitumie jina <strong>NJIAKIKOBA</strong> — hilo ni jina la mfumo. Code ya kikundi: <code>NK/{INITIALS}</code> (mfano CHAPAKAZI → <strong>NK/CK</strong>). Namba #### ni ya <em>mwanachama</em>: <strong>NK/CK-0001</strong>.</p></div>
+<div class="field"><label>Ukomo wa Wanachama (chaguo-msingi 999)</label><input type="number" name="member_cap" min="1" max="999" value="999"></div>
 <div class="field"><label>WhatsApp Group Link</label><input type="url" name="whatsapp_group_url" placeholder="https://chat.whatsapp.com/..." /></div>
 <button class="btn">➕ Sajili Kikundi</button>
 </form></div>

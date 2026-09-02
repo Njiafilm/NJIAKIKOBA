@@ -8,7 +8,7 @@
 <body>
 <nav class="nav">
   <a class="brand" href="/"><img src="/static/njiakikoba-hero.jpg"> NJIAKIKOBA</a>
-  <div class="navlinks"><a href="/login">Ingia Mwanachama</a><a href="/register-leaders">Sajili Kiongozi</a></div>
+  <div class="navlinks"><a href="/set-lang/{{ other_lang }}?next={{ request.path|urlencode }}" style="margin-right:8px">🌐 {{ lang|upper }}</a><a href="/login">Ingia Mwanachama</a><a href="/register-leaders">Sajili Kiongozi</a></div>
   
 </nav>
 <main class="auth">

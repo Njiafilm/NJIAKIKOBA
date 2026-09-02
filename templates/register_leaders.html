@@ -4,14 +4,14 @@
 <style>
 .form-page{max-width:720px;margin:auto;padding:22px 12px}.card{background:#fff;border:1px solid #dce5df;border-radius:16px;padding:20px;box-shadow:0 8px 25px rgba(20,55,30,.08)}h1{color:#12321c}.hint{color:#617067;line-height:1.6}.field{margin:13px 0}.field label{display:block;font-weight:800;color:#20372a;margin-bottom:6px}.field input,.field select{width:100%;padding:12px;border:1px solid #bdc9c1;border-radius:9px;font-size:16px}.btn{width:100%;padding:13px;border:0;border-radius:10px;background:#0e7a34;color:#fff;font-size:16px;font-weight:900}.verify-box{margin:16px 0;padding:14px;border-radius:12px;background:#f5faf6;border:1px solid #d6e8da}.verify-box h3{margin:0 0 8px;color:#12321c}.face-area{display:grid;grid-template-columns:1fr 1fr;gap:12px}.face-area video,.face-area img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#07111f;border-radius:10px}.status{font-size:13px;font-weight:800;margin-top:8px}.ok{color:#067647}.bad{color:#b42318}@media(max-width:600px){.face-area{grid-template-columns:1fr}}
 </style></head><body>
-<nav class="nav"><a class="brand" href="/">🔐 NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/login">Ingia</a></div></nav>
+<nav class="nav"><a class="brand" href="/">🔐 NJIAKIKOBA</a><div class="navlinks"><a href="/set-lang/{{ other_lang }}?next={{ request.path|urlencode }}" style="margin-right:8px">🌐 {{ lang|upper }}</a><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/login">Ingia</a></div></nav>
 <main class="form-page"><section class="card">
 <h1>👑 Sajili Kiongozi wa Kikundi</h1>
 <p class="hint">Jina la Kikundi lazima lilingane na Registration Code. Usajili wa kiongozi unahitaji ID yenye format sahihi, Face ID na biometric ya kifaa.</p>
 {% with ms=get_flashed_messages(with_categories=true) %}{% for c,m in ms %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
 <form method="post" action="/register-leaders" id="leaderForm">
 <div class="field"><label>Jina la Kikundi</label><input name="group_name" placeholder="CHAPAKAZI GROUP" required></div>
-<div class="field"><label>Registration Code ya Kikundi</label><input name="group_code" placeholder="NK-0001" required></div>
+<div class="field"><label>Registration Code ya Kikundi</label><input name="group_code" placeholder="Mfano: NK/CK" required></div>
 <div class="field"><label>Nafasi ya Kiongozi</label><input name="leader_title" placeholder="Mwenyekiti" required></div>
 <div class="field"><label>Jina Kamili</label><input name="full_name" required></div>
 <div class="field"><label>Namba ya Simu</label><input name="phone" inputmode="tel" required></div>
@@ -19,14 +19,31 @@
 <div class="field"><label>Namba ya Kitambulisho</label><input name="id_number" autocomplete="off" required></div>
 <div class="field"><label>Nywila</label><div class="password-row"><input type="password" name="password" autocomplete="new-password" minlength="8" required><button type="button" class="show-password" onclick="togglePassword(this)">👁 Onyesha</button></div></div>
 <div class="verify-box">
-<h3>🪪 Hatua ya Uthibitisho</h3><p class="hint">Format ya ID itakaguliwa. Face photo itachukuliwa kutoka kamera. Fingerprint/biometric itatumia mfumo salama wa kifaa (WebAuthn) ikiwa kifaa kinaunga mkono.</p>
+<h3>🪪 Hatua ya Uthibitisho</h3>
+<p class="hint">Usajili wa kiongozi unatumia <strong>tabaka tatu</strong> za uthibitisho: (1) format ya kitambulisho, (2) picha ya uso (Face ID), na (3) <strong>WebAuthn</strong> — fingerprint / Face ID / PIN ya kifaa.</p>
+
 <div class="face-area"><video id="faceVideo" autoplay muted playsinline></video><img id="facePreview" alt="Face ID preview" style="display:none"></div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" type="button" id="startCamera" style="width:auto">📷 Fungua Kamera</button><button class="btn" type="button" id="captureFace" style="width:auto;background:#12321c">🙂 Capture Face ID</button></div>
 <div id="faceStatus" class="status">Face ID bado haijakamilika.</div>
 <input type="hidden" name="face_image" id="faceImage">
+
 <hr style="border:0;border-top:1px solid #dfe8e1;margin:15px 0">
-<button class="btn" type="button" id="biometricBtn">☝️ Weka Fingerprint / Device Biometric</button>
-<div id="bioStatus" class="status">Biometric bado haijawekwa.</div>
+
+<div style="background:#eef6ff;border:1px solid #c5dcf5;border-radius:12px;padding:14px;margin-bottom:12px">
+  <h3 style="margin:0 0 8px;color:#0b3a66;font-size:16px">🔐 WebAuthn — Usalama wa Biometric wa Kifaa</h3>
+  <p class="hint" style="margin:0 0 8px">WebAuthn (Web Authentication) ni kiwango cha kimataifa cha W3C/FIDO kinachotumika na vivinjari vya kisasa ili kuthibitisha mtumiaji <strong>bila kuhifadhi alama za vidole au picha ya uso kwenye server</strong>.</p>
+  <ul class="hint" style="margin:0;padding-left:18px;line-height:1.55">
+    <li><strong>Platform authenticator:</strong> mfumo unatumia fingerprint, Face ID, au PIN ya simu/kompyuta yako — si nenosiri pekee.</li>
+    <li><strong>Funguo za umma/faragha:</strong> kifaa kinazalisha jozi ya funguo (public/private key). <em>Private key haiondoki kwenye kifaa</em>; server inahifadhi tu kitambulisho cha credential (credential ID), si biometric yako.</li>
+    <li><strong>User verification required:</strong> kila usajili unahitaji uthibitisho wa mmiliki wa kifaa (fingerprint/uso/PIN).</li>
+    <li><strong>Bound to domain:</strong> credential inafungwa na jina la tovuti (hostname) la NJIAKIKOBA — haiwezi kutumiwa kwenye tovuti nyingine ya udanganyifu.</li>
+    <li><strong>Hakuna kunakili biometric:</strong> hata msimamizi wa mfumo hawezi “kunakili” alama yako ya kidole kutoka database — haipo huko.</li>
+  </ul>
+  <p class="hint" style="margin:10px 0 0"><strong>Muhimu:</strong> WebAuthn hapa inathibitisha kuwa kiongozi amesajiliwa kutoka kifaa chenye biometric halali wakati wa usajili. Ingia kila siku bado hutumia namba ya simu + nywila; WebAuthn inaongeza uhakika wa utambulisho wakati wa kujiandikisha kama kiongozi.</p>
+</div>
+
+<button class="btn" type="button" id="biometricBtn">☝️ Weka Fingerprint / Device Biometric (WebAuthn)</button>
+<div id="bioStatus" class="status">Biometric bado haijawekwa — bonyeza kitufe hapo juu.</div>
 <input type="hidden" name="biometric_credential" id="biometricCredential">
 </div>
 <button class="btn" type="submit" id="submitBtn">Sajili Kiongozi</button>
@@ -38,6 +55,52 @@ let cam=null;
 document.getElementById('startCamera').onclick=async()=>{try{cam=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:540}},audio:false});video.srcObject=cam;faceStatus.textContent='✓ Kamera iko tayari. Angalia kamera vizuri.';faceStatus.className='status ok';}catch(e){faceStatus.textContent='❌ Kamera haijaruhusiwa au haipatikani.';faceStatus.className='status bad';}};
 document.getElementById('captureFace').onclick=()=>{if(!video.srcObject){faceStatus.textContent='Fungua kamera kwanza.';faceStatus.className='status bad';return;}const c=document.createElement('canvas');c.width=720;c.height=540;const ctx=c.getContext('2d');ctx.drawImage(video,0,0,c.width,c.height);const data=c.toDataURL('image/jpeg',.88);faceInput.value=data;preview.src=data;preview.style.display='block';video.style.display='none';faceStatus.textContent='✓ Face ID imechukuliwa.';faceStatus.className='status ok';if(cam){cam.getTracks().forEach(t=>t.stop());cam=null;}};
 function b64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-document.getElementById('biometricBtn').onclick=async()=>{try{if(!window.PublicKeyCredential||!navigator.credentials){throw new Error('WebAuthn haipo');}const available=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();if(!available)throw new Error('Kifaa hakina fingerprint/device biometric inayopatikana');const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const cred=await navigator.credentials.create({publicKey:{challenge,rp:{name:'NJIAKIKOBA',id:location.hostname},user:{id:userId,name:document.querySelector('[name=phone]').value||'leader',displayName:document.querySelector('[name=full_name]').value||'Kiongozi'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},timeout:60000,attestation:'none'}});if(!cred)throw new Error('Biometric haikukamilika');bioInput.value=JSON.stringify({id:cred.id,type:cred.type,rawId:b64url(cred.rawId),createdAt:new Date().toISOString()});bioStatus.textContent='✓ Fingerprint/device biometric imeandikishwa.';bioStatus.className='status ok';}catch(e){bioStatus.textContent='❌ '+(e.message||'Biometric haipatikani.');bioStatus.className='status bad';}};
+document.getElementById('biometricBtn').onclick=async()=>{try{
+  if(!window.PublicKeyCredential||!navigator.credentials){
+    throw new Error('Kivinjari hiki hakitumii WebAuthn. Tumia Chrome, Safari, Edge au Firefox ya kisasa.');
+  }
+  const available=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  if(!available){
+    throw new Error('Kifaa hakina fingerprint / Face ID / device PIN inayotumika na WebAuthn.');
+  }
+  // Challenge is random; private key never leaves the device (FIDO2/WebAuthn).
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  const userId=crypto.getRandomValues(new Uint8Array(16));
+  const cred=await navigator.credentials.create({
+    publicKey:{
+      challenge,
+      rp:{name:'NJIAKIKOBA', id:location.hostname},
+      user:{
+        id:userId,
+        name:document.querySelector('[name=phone]').value||'leader',
+        displayName:document.querySelector('[name=full_name]').value||'Kiongozi'
+      },
+      // ES256 (-7) and RS256 (-257) — common secure algorithms
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{
+        authenticatorAttachment:'platform', // built-in sensor, not USB key only
+        userVerification:'required',        // must unlock with biometric/PIN
+        residentKey:'preferred'
+      },
+      timeout:60000,
+      attestation:'none' // we store credential id only; no full attestation blob required
+    }
+  });
+  if(!cred) throw new Error('WebAuthn haikukamilika.');
+  // Server stores credential identifier only — never the fingerprint template.
+  bioInput.value=JSON.stringify({
+    id:cred.id,
+    type:cred.type,
+    rawId:b64url(cred.rawId),
+    createdAt:new Date().toISOString(),
+    rpId:location.hostname,
+    method:'webauthn-platform'
+  });
+  bioStatus.textContent='✓ WebAuthn imefanikiwa: credential ya kifaa imeandikishwa (fingerprint/Face ID/PIN). Alama yako haiko kwenye server.';
+  bioStatus.className='status ok';
+}catch(e){
+  bioStatus.textContent='❌ '+(e.message||'WebAuthn haipatikani kwenye kifaa hiki.');
+  bioStatus.className='status bad';
+}};
 document.getElementById('leaderForm').addEventListener('submit',e=>{if(!faceInput.value||!bioInput.value){e.preventDefault();alert('Kamilisha Face ID na Fingerprint/Device Biometric kabla ya kusajili kiongozi.');}});
 </script></body></html>

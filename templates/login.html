@@ -6,10 +6,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 </head><body>
-<nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero.jpg"> NJIAKIKOBA</a><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/register">Jiunge</a></div></nav>
+<nav class="nav"><a class="brand" href="/"><img src="/static/njiakikoba-hero.jpg"> NJIAKIKOBA</a><div class="navlinks"><a href="/set-lang/{{ other_lang }}?next={{ request.path|urlencode }}" style="margin-right:8px">🌐 {{ lang|upper }}</a><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/register">Jiunge</a></div></nav>
 <main class="auth"><form class="form-card" method="post"><h1>Karibu Tena</h1><p class="muted">Ingia kwenye akaunti yako.</p>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for c,m in messages %}<div class="alert {{c}}">{{m}}</div>{% endfor %}{% endwith %}
-<label>Namba ya simu</label><input name="phone" inputmode="tel" required>
+<label>Namba ya simu</label><input name="phone" inputmode="tel" placeholder="07XXXXXXXX au 2557XXXXXXXX" autocomplete="tel" required>
 <label>Nywila</label><div class="password-row"><input name="password" type="password" autocomplete="current-password" required><button type="button" class="show-password" onclick="togglePassword(this)">👁 Onyesha</button></div>
 <br><br><button class="btn btn-dark" type="submit">Ingia</button><p class="muted">Huna akaunti? <a href="/register">Jisajili</a></p><p class="leader-cta">Wewe ni kiongozi wa kikundi? <a href="/register-leaders">Jisajili hapa</a></p></form></main>
 <script>function togglePassword(btn){const input=btn.parentElement.querySelector('input');if(!input)return;const showing=input.type==='text';input.type=showing?'password':'text';btn.textContent=showing?'👁 Onyesha':'🙈 Ficha';}</script>

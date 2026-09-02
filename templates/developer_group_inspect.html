@@ -7,7 +7,31 @@
 <nav class="nav"><span class="brand">🔐 DEVELOPER · PRIVATE INSPECTION</span><div class="navlinks"><a href="javascript:history.back()" class="back-btn">← Rudi Nyuma</a><a href="/developer-dashboard/groups">Vikundi</a><a href="/logout">Toka</a></div></nav>
 <main class="page">
 <div class="card"><h1>🔍 {{group['group_name']}}</h1><div class="private">🔒 PRIVATE: Developer hajaingizwa kwenye kikundi, Group Chat, au conference. Ukurasa huu ni wa ukaguzi wa ndani tu.</div>
-<p>Registration Code: <strong>{{group['registration_code']}}</strong> · Ukomo: <strong>{{group['member_cap']}}</strong></p></div>
+<p>Registration Code: <strong>{{group['registration_code']}}</strong> · Ukomo: <strong>{{group['member_cap']}}</strong></p>
+<p class="muted" style="font-size:13px">Code ya kikundi: <code>NK/{INITIALS}</code>. Code ya mwanachama: <code>NK/{INITIALS}-####</code> (#### = namba ya uanachama, si ya kikundi).</p>
+</div>
+
+<div class="card">
+<h2>🛠️ Sasisha Kikundi</h2>
+<form method="post" action="/developer-dashboard/groups/{{group['id']}}/update">
+<input type="hidden" name="action" value="save">
+<p><label>Jina la Kikundi</label><br>
+<input name="group_name" value="{{group['group_name']}}" style="width:100%;max-width:420px;padding:10px;border:1px solid #bdc9c1;border-radius:8px">
+<small class="muted">Kubadilisha jina kunasasisha Registration Code kiotomatiki (mfano CHAPAKAZI → NK/CK-0001).</small></p>
+<p><label>WhatsApp Group Link</label><br>
+<input name="whatsapp_group_url" value="{{group['whatsapp_group_url'] or ''}}" placeholder="https://chat.whatsapp.com/..." style="width:100%;max-width:520px;padding:10px;border:1px solid #bdc9c1;border-radius:8px">
+<label style="font-weight:normal"><input type="checkbox" name="clear_whatsapp"> Futa link</label></p>
+<p><label>Ukomo wa Wanachama</label><br>
+<input type="number" name="member_cap" min="1" max="9999" value="{{group['member_cap'] or 999}}" style="width:140px;padding:10px;border:1px solid #bdc9c1;border-radius:8px"></p>
+<p><label>Settlement Phone (hiari)</label><br>
+<input name="settlement_phone" value="{{group['settlement_phone'] or ''}}" placeholder="2557XXXXXXXX" style="width:220px;padding:10px;border:1px solid #bdc9c1;border-radius:8px"></p>
+<button class="btn" type="submit" style="background:#0e7a34;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:900">💾 Hifadhi Mabadiliko</button>
+</form>
+<form method="post" action="/developer-dashboard/groups/{{group['id']}}/update" style="margin-top:12px" onsubmit="return confirm('Tengeneza Registration Code upya kutoka jina la sasa?');">
+<input type="hidden" name="action" value="regenerate_code">
+<button type="submit" style="background:#12321c;color:#fff;border:0;border-radius:9px;padding:10px 14px;font-weight:900">🔁 Regenerates Registration Code</button>
+</form>
+</div>
 <div class="stats"><div class="stat">👥<b>{{stats['members']}}</b>Wanachama</div><div class="stat">👑<b>{{stats['leaders']}}</b>Viongozi</div><div class="stat">💰<b>{{'{:,.0f}'.format(stats['savings'])}}</b>Akiba</div><div class="stat">💳<b>{{'{:,.0f}'.format(stats['loans'])}}</b>Mikopo</div></div>
 <div class="card"><h2>👥 Wanachama</h2><div class="table-wrap"><table><tr><th>#</th><th>Jina</th><th>Simu</th><th>Role</th><th>Akiba</th><th>Mkopo</th><th>Status</th></tr>
 {% for m in members %}<tr><td>{{m['member_number']}}</td><td>{{m['full_name']}}</td><td>{{m['phone']}}</td><td>{{m['role']}}</td><td>{{'{:,.0f}'.format(m['savings'] or 0)}}</td><td>{{'{:,.0f}'.format(m['loan_balance'] or 0)}}</td><td>{{m['status']}}</td></tr>{% endfor %}

@@ -16,6 +16,7 @@
   <div class="dev-nav-links">
     <a href="/developer-dashboard/groups" class="btn btn-gold">🏘️ Simamia Vikundi</a>
     <a href="/developer-dashboard/chat" class="btn btn-gold">💬 Group Chat (Simamia)</a>
+    <a href="/developer-dashboard/support/search" class="btn btn-gold">🛟 Support Desk</a>
     <a href="/" target="_blank" rel="noopener" class="btn btn-white">🏠 Home Page</a>
     <a href="/register-leaders" target="_blank" rel="noopener" class="btn btn-white">👤 Usajili wa Viongozi</a>
     <a href="/register" target="_blank" rel="noopener" class="btn btn-white">➕ Usajili wa Mwanachama</a>
@@ -38,6 +39,33 @@
   </form>
 </div>
 
+<div class="card" style="margin-bottom:20px;background:#fff5f5;border:1px solid #f0c2c2">
+  <h3>🛟 Msaada wa Akaunti (Login / Usajili)</h3>
+  <p class="muted">Tumia sehemu hii <strong>tu</strong> endapo mwanachama au kiongozi amekubali msaada — kwa mfano ameshindwa kuingia au kusajili. Lazima ujaze <strong>jina kamili</strong> na <strong>namba ya uanachama</strong> hasa. Kila hatua inaandikwa kwenye system logs.</p>
+  <p class="muted">Code ya <strong>kikundi</strong> (jiunge): <code>NK/CK</code>. Code ya <strong>mwanachama</strong>: <code>NK/CK-0012</code> (#### = namba ya uanachama).</p>
+  <p><a class="btn btn-gold" href="/developer-dashboard/support/search">🔍 Fungua Support Desk (Tafuta &amp; Sasisha)</a></p>
+  <form method="post" action="/developer-dashboard/support" class="dev-settings-form" onsubmit="return confirm('Thibitisha una idhini ya mmiliki wa akaunti?');">
+    <div><label>Jina Kamili (hasa kama lilivyo kwenye mfumo)</label><input name="full_name" required placeholder="Mfano: Juma Ally"></div>
+    <div><label>Namba ya Uanachama</label><input name="member_number" required placeholder="Mfano: 000012 au 12"></div>
+    <div><label>Kikundi (hiari — inasaidia kama majina yanafanana)</label>
+      <select name="group_id"><option value="">— Chagua —</option>{% for g in groups %}<option value="{{g['id']}}">{{g['group_name']}}</option>{% endfor %}</select>
+    </div>
+    <div><label>Namba ya simu (hiari)</label><input name="phone" placeholder="2557XXXXXXXX"></div>
+    <div><label>Kitendo</label>
+      <select name="action" required>
+        <option value="reset_password">🔑 Weka nywila mpya</option>
+        <option value="activate">✅ Activate akaunti</option>
+        <option value="login_as">👤 Ingia kwenye akaunti (msaada)</option>
+      </select>
+    </div>
+    <div><label>Nywila mpya (kwa reset_password tu)</label><input name="new_password" type="password" minlength="8" placeholder="Angalau herufi 8"></div>
+    <label style="display:flex;gap:8px;align-items:center;margin:8px 0">
+      <input type="checkbox" name="consent" required> Nina idhini ya mwanachama/kiongozi husika
+    </label>
+    <button class="btn btn-gold" type="submit">🛟 Tekeleza Msaada</button>
+  </form>
+</div>
+
 <div class="card" style="margin-bottom:20px">
   <h3>💰 Mapato Yako (Operating Commission + Ada ya Amana ya Kwanza)</h3>
   <div class="dev-earnings">TZS {{ "{:,.2f}".format(stats.commission) }}</div>
@@ -48,8 +76,18 @@
 <div class="table-wrap"><table class="table"><thead><tr><th>Level</th><th>Message</th><th>Tarehe</th></tr></thead><tbody>{% for l in logs %}<tr><td>{{l["level"]}}</td><td>{{l["message"]}}</td><td>{{l["created_at"]}}</td></tr>{% else %}<tr><td colspan="3">Hakuna system logs.</td></tr>{% endfor %}</tbody></table></div>
 
 <div class="card dev-card" style="margin-bottom:20px;background:#f3f8ff">
-  <h3>🧠 Recognition Quality</h3>
+  <h3>🧠 Recognition Quality &amp; WebAuthn</h3>
   <p class="muted">Udhibiti wa ubora wa utambuzi wa ID/Face na taarifa za biometric enrollment za viongozi. Hii ni technical control; uthibitisho rasmi wa NIDA unahitaji API rasmi ya mamlaka.</p>
+  <div style="margin:10px 0;padding:12px;border-radius:10px;background:#eef6ff;border:1px solid #c5dcf5;font-size:13px;line-height:1.55;color:#1a3a55">
+    <strong>🔐 Jinsi WebAuthn inavyotumika kwenye NJIAKIKOBA</strong>
+    <ul style="margin:8px 0 0;padding-left:18px">
+      <li>Wakati kiongozi anajisajili, kivinjari huunda <em>platform credential</em> (fingerprint / Face ID / device PIN) kupitia API ya WebAuthn/FIDO2.</li>
+      <li>Server inahifadhi tu <strong>credential ID</strong> na metadata — <strong>haitunzi</strong> template ya alama ya kidole wala picha ya biometric ya sensor.</li>
+      <li>Private key inabaki ndani ya secure element ya kifaa; haiwezi kutolewa nje hata na developer.</li>
+      <li>Credential inafungwa na domain ya tovuti (origin binding) ili kuzuia phishing.</li>
+      <li>Uthibitisho wa NIDA/passport bado unategemea format + (baadaye) API rasmi — WebAuthn inaongeza uhakika wa kifaa, si uhakika wa serikali.</li>
+    </ul>
+  </div>
   <div class="dev-summary-grid">
     <div><span class="cert-label">Viongozi wenye biometric</span><br><strong>{{ stats.biometric_enrolled }}</strong></div>
     <div><span class="cert-label">ID verification pending</span><br><strong>{{ stats.pending_identity }}</strong></div>

@@ -17,9 +17,10 @@
     </a>
     <div class="topbar-right">
       <div class="home-menu-wrap">
-        <a class="home-nav-btn" href="/" aria-label="{{ 'Mwanzo' if lang == 'sw' else 'Home' }}" title="{{ 'Mwanzo' if lang == 'sw' else 'Home' }}">
-          <img class="home-click-icon" src="{{ url_for('static', filename='icons/home-click.png') }}" alt="">
-          </a>
+        <a class="home-nav-btn language-circle" id="languageCircleBtn" href="/set-lang/{{ other_lang }}?next={{ request.path|urlencode }}" aria-label="{{ 'Badili lugha' if lang == 'sw' else 'Change language' }}" title="{{ 'Badili lugha' if lang == 'sw' else 'Change language' }}" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;background:#0e3d1f;color:#fff;font-weight:800;border:1px solid #1a5c30">
+          <span aria-hidden="true">🌐</span>
+          <span class="language-code">{{ lang|upper }} → {{ other_lang_label }}</span>
+        </a>
         <button class="home-menu-toggle" id="homeMenuBtn" type="button" aria-expanded="false" aria-controls="homeMenu" aria-label="{{ 'Fungua menyu ya nyumbani' if lang == 'sw' else 'Open home menu' }}"><span class="home-caret">⌄</span></button>
         <div class="home-menu-panel" id="homeMenu" role="menu">
           <a href="#" role="menuitem">🏠 <span>{{ 'Mwanzo' if lang == 'sw' else 'Home' }}</span></a>
@@ -27,7 +28,6 @@
           <a href="#contact" role="menuitem">📞 <span>{{ 'Mawasiliano' if lang == 'sw' else 'Contact' }}</span></a>
         </div>
       </div>
-      <a class="lang-switch" href="/?lang={{ 'en' if lang == 'sw' else 'sw' }}" aria-label="Switch language">{{ 'SW' if lang == 'sw' else 'EN' }}</a>
     </div>
   </nav>
 
@@ -105,6 +105,10 @@
   document.addEventListener('click',close);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
 })();
+
+function switchLanguage(){
+  window.location.href = '/set-lang/' + {{ '"en"' if lang == 'sw' else '"sw"' }} + '?next=/';
+}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/static/service-worker.js',{scope:'/'}).catch(()=>{}));}
 </script>
 </body>
